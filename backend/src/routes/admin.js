@@ -1,5 +1,6 @@
 const express = require("express");
 const supabase = require("../supabase");
+const { getReportsTable } = require("../dbUtils");
 const { requireAdmin } = require("../middleware/auth");
 
 const router = express.Router();
@@ -32,8 +33,9 @@ router.get("/stats", requireAdmin, async (req, res) => {
     if (usersErr) console.warn("Error fetching user count:", usersErr);
 
     // 2. Hazard Reports Statistics
+    const tableName = await getReportsTable();
     const { data: reports, error: reportsErr } = await supabase
-      .from("reports")
+      .from(tableName)
       .select("status");
 
     if (reportsErr) {
@@ -41,20 +43,24 @@ router.get("/stats", requireAdmin, async (req, res) => {
       return res.status(500).json({ success: false, message: "Failed to fetch dashboard stats" });
     }
 
-    const totalReports = reports ? reports.length : 0;
-    const reported = reports ? reports.filter(r => r.status === "REPORTED").length : 0;
-    const verified = reports ? reports.filter(r => r.status === "VERIFIED").length : 0;
-    const inProgress = reports ? reports.filter(r => r.status === "IN_PROGRESS").length : 0;
-    const resolved = reports ? reports.filter(r => r.status === "RESOLVED").length : 0;
+    const reportsList = reports || [];
+    const totalReports = reportsList.length;
+    const reported = reportsList.filter(r => (r.status || "").toUpperCase() === "REPORTED").length;
+    const verified = reportsList.filter(r => (r.status || "").toUpperCase() === "VERIFIED").length;
+    const inProgress = reportsList.filter(r => (r.status || "").toUpperCase() === "IN_PROGRESS").length;
+    const resolved = reportsList.filter(r => (r.status || "").toUpperCase() === "RESOLVED").length;
 
     res.json({
       success: true,
       stats: {
         totalUsers: totalUsers || 0,
         totalReports,
-        activeReports: reported + verified + inProgress,
+        newReports: reported,
+        awaitingVerification: reported,
+        verifiedReports: verified,
+        inProgressReports: inProgress,
         resolvedReports: resolved,
-        awaitingVerification: reported
+        activeReports: reported + verified + inProgress
       }
     });
   } catch (err) {
@@ -83,8 +89,9 @@ router.get("/users", requireAdmin, async (req, res) => {
     }
 
     // Fetch all reports to aggregate report counts per user
+    const tableName = await getReportsTable();
     const { data: reports } = await supabase
-      .from("reports")
+      .from(tableName)
       .select("user_id");
 
     const reportCountMap = {};
@@ -99,8 +106,8 @@ router.get("/users", requireAdmin, async (req, res) => {
     const formattedUsers = (profiles || []).map(p => ({
       id: p.id,
       email: p.email,
-      name: p.full_name || p.name || p.email.split("@")[0],
-      full_name: p.full_name || p.name || p.email.split("@")[0],
+      name: p.full_name || p.name || (p.email ? p.email.split("@")[0] : "User"),
+      full_name: p.full_name || p.name || (p.email ? p.email.split("@")[0] : "User"),
       avatar_url: p.avatar_url || "",
       role: p.role || "user",
       created_at: p.created_at || new Date().toISOString(),
@@ -114,6 +121,114 @@ router.get("/users", requireAdmin, async (req, res) => {
     });
   } catch (err) {
     console.error("Admin list users error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+/*
+  LIST ALL REPORTS WITH FULL REPORTER DETAILS (ADMIN ONLY)
+  GET /api/admin/reports
+*/
+router.get("/reports", requireAdmin, async (req, res) => {
+  try {
+    if (!checkSupabaseConfigured(res)) return;
+
+    const tableName = await getReportsTable();
+    const { data: reports, error: reportsErr } = await supabase
+      .from(tableName)
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (reportsErr) {
+      console.error("Error fetching reports for admin:", reportsErr);
+      return res.status(500).json({ success: false, message: "Failed to fetch reports" });
+    }
+
+    // Fetch all profiles to attach reporter identity
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, name, full_name, email, avatar_url");
+
+    const profileMap = {};
+    (profiles || []).forEach(p => {
+      profileMap[p.id] = p;
+    });
+
+    const enrichedReports = (reports || []).map(r => {
+      const p = r.user_id ? profileMap[r.user_id] : null;
+      return {
+        ...r,
+        reporter: p
+          ? {
+              id: p.id,
+              name: p.full_name || p.name || p.email?.split("@")[0] || "Registered User",
+              email: p.email || "Not specified",
+              avatar_url: p.avatar_url || ""
+            }
+          : {
+              name: "Anonymous Citizen",
+              email: "Not provided",
+              avatar_url: ""
+            }
+      };
+    });
+
+    res.json({
+      success: true,
+      count: enrichedReports.length,
+      reports: enrichedReports
+    });
+  } catch (err) {
+    console.error("Admin list reports error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+/*
+  UPDATE REPORT (STATUS, ASSIGNMENT, NOTES) (ADMIN ONLY)
+  PUT /api/admin/reports/:id
+*/
+router.put("/reports/:id", requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, assigned_to } = req.body;
+
+    if (!checkSupabaseConfigured(res)) return;
+
+    const updatePayload = {
+      updated_at: new Date().toISOString()
+    };
+
+    if (status) {
+      const allowed = ["REPORTED", "VERIFIED", "IN_PROGRESS", "RESOLVED"];
+      const norm = status.toUpperCase();
+      if (!allowed.includes(norm)) {
+        return res.status(400).json({ success: false, message: `Invalid status. Allowed: ${allowed.join(", ")}` });
+      }
+      updatePayload.status = norm;
+    }
+
+    if (assigned_to !== undefined) updatePayload.assigned_to = assigned_to;
+
+    const tableName = await getReportsTable();
+    const { data, error } = await supabase
+      .from(tableName)
+      .update(updatePayload)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error || !data) {
+      return res.status(404).json({ success: false, message: "Failed to update report" });
+    }
+
+    res.json({
+      success: true,
+      message: "Report updated successfully",
+      report: data
+    });
+  } catch (err) {
+    console.error("Admin update report error:", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });

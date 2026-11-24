@@ -20,6 +20,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import {
   getHazards,
+  getAdminReports,
   updateHazardStatus,
   deleteHazard,
   getAdminStats,
@@ -36,7 +37,10 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalReports: 0,
+    newReports: 0,
     activeReports: 0,
+    verifiedReports: 0,
+    inProgressReports: 0,
     resolvedReports: 0,
     awaitingVerification: 0
   });
@@ -45,6 +49,8 @@ export default function AdminDashboard() {
   const [reportsList, setReportsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [categoryFilter, setCategoryFilter] = useState('ALL');
 
   const [actionLoadingId, setActionLoadingId] = useState(null);
   const [statusMessage, setStatusMessage] = useState(null);
@@ -59,12 +65,12 @@ export default function AdminDashboard() {
       const [statsData, usersData, reportsData] = await Promise.all([
         getAdminStats(session.access_token),
         getAdminUsers(session.access_token),
-        getHazards()
+        getAdminReports(session.access_token).catch(() => getHazards().then(r => r.data))
       ]);
 
       if (statsData) setStats(statsData);
       setUsersList(usersData || []);
-      setReportsList(reportsData.data || []);
+      setReportsList(reportsData || []);
     } catch (err) {
       console.error('Admin portal data fetch error:', err);
       setErrorMessage(err.message || 'Failed to load admin portal data. Ensure backend is running.');
@@ -200,13 +206,32 @@ export default function AdminDashboard() {
   });
 
   const filteredReports = reportsList.filter((r) => {
+    // Status filter
+    if (statusFilter !== 'ALL') {
+      const rStatus = (r.rawStatus || r.status || '').toUpperCase();
+      if (statusFilter === 'IN_PROGRESS' && (rStatus !== 'IN_PROGRESS' && rStatus !== 'IN PROGRESS')) {
+        return false;
+      } else if (statusFilter !== 'IN_PROGRESS' && rStatus !== statusFilter) {
+        return false;
+      }
+    }
+
+    // Category filter
+    if (categoryFilter !== 'ALL' && r.category !== categoryFilter) {
+      return false;
+    }
+
+    // Search query filter
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
       (r.id && String(r.id).toLowerCase().includes(q)) ||
       (r.category && r.category.toLowerCase().includes(q)) ||
       (r.address && r.address.toLowerCase().includes(q)) ||
-      (r.status && r.status.toLowerCase().includes(q))
+      (r.description && r.description.toLowerCase().includes(q)) ||
+      (r.status && r.status.toLowerCase().includes(q)) ||
+      (r.reporter?.name && r.reporter.name.toLowerCase().includes(q)) ||
+      (r.reporter?.email && r.reporter.email.toLowerCase().includes(q))
     );
   });
 
@@ -299,36 +324,42 @@ export default function AdminDashboard() {
         {/* TAB 1: OVERVIEW DASHBOARD */}
         {activeTab === 'overview' && (
           <div className="mt-6 space-y-6">
-            {/* Metric Cards */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-              <div className="card p-5 border-l-4 border-indigo-600 bg-white">
-                <p className="text-xs font-bold text-indigo-700 uppercase tracking-wider">Total Users</p>
-                <b className="text-3xl text-slate-900 mt-1 block">{stats.totalUsers}</b>
-                <p className="text-xs text-slate-500 mt-2">Registered Google Accounts</p>
-              </div>
-
+            {/* Metric Cards: Total, New, Verified, In-Progress, Resolved, Users */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
               <div className="card p-5 border-l-4 border-slate-700 bg-white">
                 <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">Total Reports</p>
                 <b className="text-3xl text-slate-900 mt-1 block">{stats.totalReports}</b>
-                <p className="text-xs text-slate-500 mt-2">Submitted Hazards</p>
+                <p className="text-xs text-slate-500 mt-2">All Submitted</p>
               </div>
 
               <div className="card p-5 border-l-4 border-amber-500 bg-white">
-                <p className="text-xs font-bold text-amber-700 uppercase tracking-wider">Awaiting Verification</p>
-                <b className="text-3xl text-amber-900 mt-1 block">{stats.awaitingVerification}</b>
-                <p className="text-xs text-slate-500 mt-2">New Unverified Reports</p>
+                <p className="text-xs font-bold text-amber-700 uppercase tracking-wider">New Reports</p>
+                <b className="text-3xl text-amber-900 mt-1 block">{stats.newReports || stats.awaitingVerification}</b>
+                <p className="text-xs text-slate-500 mt-2">Awaiting Verification</p>
               </div>
 
               <div className="card p-5 border-l-4 border-blue-500 bg-white">
-                <p className="text-xs font-bold text-blue-700 uppercase tracking-wider">Active Hazards</p>
-                <b className="text-3xl text-blue-900 mt-1 block">{stats.activeReports}</b>
-                <p className="text-xs text-slate-500 mt-2">Reported / Verified / In Progress</p>
+                <p className="text-xs font-bold text-blue-700 uppercase tracking-wider">Verified</p>
+                <b className="text-3xl text-blue-900 mt-1 block">{stats.verifiedReports || 0}</b>
+                <p className="text-xs text-slate-500 mt-2">Confirmed by Admin</p>
+              </div>
+
+              <div className="card p-5 border-l-4 border-purple-500 bg-white">
+                <p className="text-xs font-bold text-purple-700 uppercase tracking-wider">In Progress</p>
+                <b className="text-3xl text-purple-900 mt-1 block">{stats.inProgressReports || 0}</b>
+                <p className="text-xs text-slate-500 mt-2">Crews Dispatched</p>
               </div>
 
               <div className="card p-5 border-l-4 border-emerald-500 bg-white">
-                <p className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Resolved Reports</p>
+                <p className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Resolved</p>
                 <b className="text-3xl text-emerald-900 mt-1 block">{stats.resolvedReports}</b>
-                <p className="text-xs text-slate-500 mt-2">Closed Hazards</p>
+                <p className="text-xs text-slate-500 mt-2">Repaired & Closed</p>
+              </div>
+
+              <div className="card p-5 border-l-4 border-indigo-600 bg-white">
+                <p className="text-xs font-bold text-indigo-700 uppercase tracking-wider">Total Users</p>
+                <b className="text-3xl text-slate-900 mt-1 block">{stats.totalUsers}</b>
+                <p className="text-xs text-slate-500 mt-2">Registered Citizens</p>
               </div>
             </div>
 
@@ -501,31 +532,78 @@ export default function AdminDashboard() {
         {/* TAB 3: REPORTS MANAGEMENT */}
         {activeTab === 'reports' && (
           <section className="card mt-6 overflow-x-auto shadow-md bg-white">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 gap-3 border-b">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">Hazard Reports Management</h2>
-                <p className="text-xs text-slate-500">Review, update status, and manage crowdsourced hazard reports</p>
+            {/* Header & Controls */}
+            <div className="p-5 border-b space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">Hazard Reports Management</h2>
+                  <p className="text-xs text-slate-500">
+                    Review, assign, verify, and resolve crowdsourced hazard reports
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
+                    <input
+                      className="input pl-9 w-full sm:w-56 text-xs"
+                      placeholder="Search ID, hazard, reporter..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+
+                  <select
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    className="input text-xs font-semibold py-2 px-3 border-slate-300 rounded-lg cursor-pointer bg-white"
+                  >
+                    <option value="ALL">All Categories</option>
+                    <option value="Pothole">Pothole</option>
+                    <option value="Waterlogging">Waterlogging</option>
+                    <option value="Fallen Tree">Fallen Tree</option>
+                    <option value="Road Debris">Road Debris</option>
+                    <option value="Broken Streetlight">Broken Streetlight</option>
+                    <option value="Blocked Road">Blocked Road</option>
+                    <option value="Accident">Accident</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
               </div>
 
-              <div className="relative">
-                <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
-                <input
-                  className="input pl-9 w-full sm:w-64 text-sm"
-                  placeholder="Search hazard or address..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+              {/* Status Filter Chips */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t">
+                {[
+                  { id: 'ALL', label: `All Reports (${reportsList.length})` },
+                  { id: 'REPORTED', label: `New / Reported (${stats.newReports || stats.awaitingVerification || 0})` },
+                  { id: 'VERIFIED', label: `Verified (${stats.verifiedReports || 0})` },
+                  { id: 'IN_PROGRESS', label: `In Progress (${stats.inProgressReports || 0})` },
+                  { id: 'RESOLVED', label: `Resolved (${stats.resolvedReports || 0})` }
+                ].map((flt) => (
+                  <button
+                    key={flt.id}
+                    onClick={() => setStatusFilter(flt.id)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                      statusFilter === flt.id
+                        ? 'bg-slate-900 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {flt.label}
+                  </button>
+                ))}
               </div>
             </div>
 
-            <table className="w-full min-w-[900px] text-left text-sm">
+            <table className="w-full min-w-[1100px] text-left text-sm">
               <thead className="border-b bg-slate-50 text-slate-600 font-bold uppercase text-xs">
                 <tr>
                   <th className="p-4">Report ID</th>
                   <th className="p-4">Photo</th>
-                  <th className="p-4">Hazard & Location</th>
-                  <th className="p-4">Severity</th>
-                  <th className="p-4">Traffic Affected</th>
+                  <th className="p-4">Category & Details</th>
+                  <th className="p-4">Location</th>
+                  <th className="p-4">Submission Time</th>
+                  <th className="p-4">Reporter Identity</th>
                   <th className="p-4">Current Status</th>
                   <th className="p-4">Update Status</th>
                   <th className="p-4 text-right">Actions</th>
@@ -534,42 +612,66 @@ export default function AdminDashboard() {
               <tbody className="divide-y divide-slate-100">
                 {filteredReports.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="p-8 text-center text-slate-500">
-                      No hazard reports found.
+                    <td colSpan={9} className="p-8 text-center text-slate-500">
+                      No hazard reports found matching your criteria.
                     </td>
                   </tr>
                 ) : (
                   filteredReports.map((r) => (
                     <tr key={r.id} className="hover:bg-slate-50/80 transition">
                       <td className="p-4 font-mono font-bold text-xs text-slate-800">
-                        {String(r.id).substring(0, 8)}...
+                        #{String(r.id).substring(0, 8)}
                       </td>
 
                       <td className="p-4">
                         {r.imageUrl ? (
                           <img src={r.imageUrl} alt={r.category} className="h-12 w-12 rounded-lg object-cover border" />
                         ) : (
-                          <div className="h-12 w-12 bg-slate-100 rounded-lg grid place-items-center text-xs text-slate-400 font-bold">
+                          <div className="h-12 w-12 bg-slate-100 rounded-lg grid place-items-center text-[10px] text-slate-400 font-bold text-center">
                             No photo
                           </div>
                         )}
                       </td>
 
-                      <td className="p-4 max-w-[240px]">
+                      <td className="p-4 max-w-[220px]">
                         <p className="font-extrabold text-slate-900">{r.category}</p>
-                        <p className="text-xs text-slate-600 flex items-center gap-1 mt-0.5" title={r.address}>
-                          <MapPin size={12} className="shrink-0 text-brand" />
+                        {r.description ? (
+                          <p className="text-xs text-slate-500 mt-1 line-clamp-2 italic">"{r.description}"</p>
+                        ) : (
+                          <p className="text-xs text-slate-400 mt-0.5 italic">No description provided</p>
+                        )}
+                        <div className="mt-1 flex items-center gap-1.5">
+                          <Badge value={r.severity} kind="severity" />
+                        </div>
+                      </td>
+
+                      <td className="p-4 max-w-[200px]">
+                        <p className="text-xs text-slate-700 font-medium flex items-start gap-1" title={r.address}>
+                          <MapPin size={13} className="shrink-0 text-brand mt-0.5" />
                           <span className="truncate">{r.address}</span>
                         </p>
-                        {r.description && <p className="text-xs text-slate-500 mt-1 line-clamp-1 italic">{r.description}</p>}
                       </td>
 
-                      <td className="p-4">
-                        <Badge value={r.severity} kind="severity" />
+                      <td className="p-4 text-xs text-slate-600 whitespace-nowrap">
+                        <p className="font-semibold text-slate-800">
+                          {r.reportedAt ? new Date(r.reportedAt).toLocaleDateString() : 'N/A'}
+                        </p>
+                        <p className="text-[11px] text-slate-400">
+                          {r.reportedAt ? new Date(r.reportedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                        </p>
                       </td>
 
-                      <td className="p-4 text-xs font-semibold text-slate-700">
-                        {r.trafficImpact === 'yes' ? '🚨 Blocked/Heavy' : r.trafficImpact === 'partial' ? '⚠️ Partial' : '✅ Clear'}
+                      <td className="p-4 max-w-[180px]">
+                        <p className="font-bold text-xs text-slate-900 truncate">
+                          {r.reporter?.name || 'Community Member'}
+                        </p>
+                        {r.reporter?.email ? (
+                          <p className="text-[11px] text-slate-500 font-mono truncate" title={r.reporter.email}>
+                            {r.reporter.email}
+                          </p>
+                        ) : (
+                          <span className="text-[10px] text-slate-400 italic">Protected / Anonymous</span>
+                        )}
                       </td>
 
                       <td className="p-4">
@@ -590,15 +692,26 @@ export default function AdminDashboard() {
                         </select>
                       </td>
 
-                      <td className="p-4 text-right">
-                        <button
-                          onClick={() => handleDeleteReport(r.id)}
-                          disabled={actionLoadingId === r.id}
-                          className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition"
-                          title="Delete Hazard Report"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                      <td className="p-4 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1">
+                          <Link
+                            to={`/hazards/${r.id}`}
+                            className="p-2 text-brand hover:text-brand-dark rounded-lg hover:bg-slate-100 transition inline-flex items-center gap-1 text-xs font-bold"
+                            title="Open Detailed Report Page"
+                          >
+                            <ExternalLink size={15} />
+                            Details
+                          </Link>
+
+                          <button
+                            onClick={() => handleDeleteReport(r.id)}
+                            disabled={actionLoadingId === r.id}
+                            className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition"
+                            title="Delete Hazard Report"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))

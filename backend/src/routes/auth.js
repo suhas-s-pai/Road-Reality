@@ -24,7 +24,11 @@ router.get("/profile", requireAuth, async (req, res) => {
       .single();
 
     // Check bootstrap admin email
-    const isAdminEmail = process.env.ADMIN_EMAIL && process.env.ADMIN_EMAIL.toLowerCase() === req.user.email.toLowerCase();
+    const isAdminEmail = Boolean(
+      process.env.ADMIN_EMAIL &&
+      req.user.email &&
+      process.env.ADMIN_EMAIL.toLowerCase() === req.user.email.toLowerCase()
+    );
 
     if (error || !profile) {
       // Return basic user info if profile table isn't populated yet
@@ -34,7 +38,8 @@ router.get("/profile", requireAuth, async (req, res) => {
           id: req.user.id,
           email: req.user.email,
           name: req.user.user_metadata?.full_name || req.user.user_metadata?.name || req.user.email.split("@")[0],
-          avatar_url: req.user.user_metadata?.avatar_url,
+          full_name: req.user.user_metadata?.full_name || req.user.user_metadata?.name || req.user.email.split("@")[0],
+          avatar_url: req.user.user_metadata?.avatar_url || "",
           role: isAdminEmail ? "admin" : "user"
         }
       });
@@ -46,6 +51,8 @@ router.get("/profile", requireAuth, async (req, res) => {
       success: true,
       user: {
         ...profile,
+        name: profile.full_name || profile.name || req.user.email.split("@")[0],
+        full_name: profile.full_name || profile.name || req.user.email.split("@")[0],
         role: effectiveRole
       }
     });
@@ -68,20 +75,56 @@ router.post("/sync-profile", requireAuth, async (req, res) => {
     const user = req.user;
     const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email.split("@")[0];
     const avatar_url = user.user_metadata?.avatar_url || null;
-    const isAdminEmail = process.env.ADMIN_EMAIL && process.env.ADMIN_EMAIL.toLowerCase() === user.email.toLowerCase();
-    const role = isAdminEmail ? "admin" : "user";
+    const isAdminEmail = Boolean(
+      process.env.ADMIN_EMAIL &&
+      user.email &&
+      process.env.ADMIN_EMAIL.toLowerCase() === user.email.toLowerCase()
+    );
 
-    const { data: profile, error } = await supabase
+    // Check existing profile to preserve an existing admin role
+    const { data: existingProfile } = await supabase
       .from("profiles")
-      .upsert({
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    const existingRole = existingProfile?.role || "user";
+    const finalRole = isAdminEmail ? "admin" : existingRole;
+
+    const profileData = {
+      id: user.id,
+      email: user.email,
+      name,
+      full_name: name,
+      avatar_url,
+      role: finalRole,
+      updated_at: new Date().toISOString()
+    };
+
+    let { data: profile, error } = await supabase
+      .from("profiles")
+      .upsert(profileData, { onConflict: "id" })
+      .select()
+      .single();
+
+    // Fallback if full_name or name column is missing in older table schema
+    if (error && error.code === "42703") {
+      const fallbackData = {
         id: user.id,
         email: user.email,
         name,
         avatar_url,
-        role
-      }, { onConflict: "id" })
-      .select()
-      .single();
+        role: finalRole
+      };
+      const retryRes = await supabase
+        .from("profiles")
+        .upsert(fallbackData, { onConflict: "id" })
+        .select()
+        .single();
+
+      profile = retryRes.data;
+      error = retryRes.error;
+    }
 
     if (error) {
       console.warn("Profile sync warning (schema may need setup):", error.message);
@@ -91,8 +134,9 @@ router.post("/sync-profile", requireAuth, async (req, res) => {
           id: user.id,
           email: user.email,
           name,
+          full_name: name,
           avatar_url,
-          role
+          role: finalRole
         }
       });
     }

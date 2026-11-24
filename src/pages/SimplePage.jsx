@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getMyReports, getHazards } from '../services/hazardService';
+import { getMyReports } from '../services/hazardService';
 import HazardCard from '../components/HazardCard';
 import { useAuth } from '../context/AuthContext';
-import { User, Shield, AlertTriangle, Plus } from 'lucide-react';
+import { User, Shield, AlertTriangle, Plus, RefreshCw } from 'lucide-react';
 
 export default function SimplePage({ type }) {
   const { user, session, role, isAdmin, signOut } = useAuth();
@@ -11,21 +11,17 @@ export default function SimplePage({ type }) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('All');
 
+  const loadReports = () => {
+    setLoading(true);
+    getMyReports(session?.access_token)
+      .then((res) => setMyReports(res.data || []))
+      .catch(() => setMyReports([]))
+      .finally(() => setLoading(false));
+  };
+
   useEffect(() => {
     if (type === 'reports') {
-      setLoading(true);
-      if (session?.access_token) {
-        getMyReports(session.access_token)
-          .then((res) => setMyReports(res.data || []))
-          .catch(() => setMyReports([]))
-          .finally(() => setLoading(false));
-      } else {
-        // Fallback fetch all or empty
-        getHazards()
-          .then((res) => setMyReports(res.data || []))
-          .catch(() => setMyReports([]))
-          .finally(() => setLoading(false));
-      }
+      loadReports();
     }
   }, [type, session]);
 
@@ -44,9 +40,20 @@ export default function SimplePage({ type }) {
   }
 
   if (type === 'reports') {
-    const filtered = filter === 'All'
-      ? myReports
-      : myReports.filter((r) => r.status?.toLowerCase() === filter.toLowerCase() || r.verificationStatus === filter);
+    const filtered =
+      filter === 'All'
+        ? myReports
+        : myReports.filter((r) => {
+            const cleanFilter = filter.toLowerCase().replace(/[\s_-]+/g, '');
+            const cleanStatus = (r.status || '').toLowerCase().replace(/[\s_-]+/g, '');
+            const cleanRaw = (r.rawStatus || '').toLowerCase().replace(/[\s_-]+/g, '');
+            const cleanVerif = (r.verificationStatus || '').toLowerCase().replace(/[\s_-]+/g, '');
+            return (
+              cleanStatus === cleanFilter ||
+              cleanRaw === cleanFilter ||
+              cleanVerif === cleanFilter
+            );
+          });
 
     return (
       <main className="page bg-surface">
@@ -56,10 +63,21 @@ export default function SimplePage({ type }) {
               <h1 className="text-3xl font-black text-slate-900">My reports</h1>
               <p className="mt-1 text-slate-600">Track hazards you have submitted to Road Reality.</p>
             </div>
-            <Link to="/report" className="btn btn-primary self-start sm:self-auto flex items-center gap-1.5">
-              <Plus size={16} />
-              New Report
-            </Link>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={loadReports}
+                disabled={loading}
+                className="btn btn-secondary text-xs flex items-center gap-1.5"
+                title="Refresh reports"
+              >
+                <RefreshCw size={14} className={loading ? 'animate-spin text-brand' : ''} />
+                Refresh
+              </button>
+              <Link to="/report" className="btn btn-primary flex items-center gap-1.5">
+                <Plus size={16} />
+                New Report
+              </Link>
+            </div>
           </div>
 
           <div className="mt-5 flex gap-2 overflow-auto pb-2">
@@ -104,7 +122,11 @@ export default function SimplePage({ type }) {
   }
 
   if (type === 'profile') {
-    const userName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'Road User';
+    const userName =
+      user?.user_metadata?.full_name ||
+      user?.user_metadata?.name ||
+      user?.email?.split('@')[0] ||
+      'Road User';
     const avatarUrl = user?.user_metadata?.avatar_url;
 
     return (
@@ -113,7 +135,11 @@ export default function SimplePage({ type }) {
           <div className="card p-7 shadow-md">
             <div className="flex items-center gap-4">
               {avatarUrl ? (
-                <img src={avatarUrl} alt={userName} className="h-16 w-16 rounded-full object-cover border-2 border-brand" />
+                <img
+                  src={avatarUrl}
+                  alt={userName}
+                  className="h-16 w-16 rounded-full object-cover border-2 border-brand"
+                />
               ) : (
                 <div className="grid h-16 w-16 place-items-center rounded-full bg-brand text-2xl font-bold text-white shadow-md">
                   {userName[0]?.toUpperCase()}

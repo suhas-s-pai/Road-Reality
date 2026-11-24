@@ -70,14 +70,14 @@ app.use((req, res) => {
     });
   }
 
-  if (staticPath && fs.existsSync(path.join(staticPath, "index.html"))) {
-    res.sendFile(path.join(staticPath, "index.html"));
-  } else {
-    res.json({
-      message: "Road Reality Backend is running 🚗 (Frontend build not found)",
-      version: "1.0.0"
-    });
+  if (req.method === "GET" && staticPath && fs.existsSync(path.join(staticPath, "index.html"))) {
+    return res.sendFile(path.join(staticPath, "index.html"));
   }
+
+  res.status(404).json({
+    success: false,
+    message: "Resource not found"
+  });
 });
 
 const PORT = process.env.PORT || 5000;

@@ -5,14 +5,31 @@ import { Link } from 'react-router-dom';
 import { Badge } from './Badges';
 import { ago } from '../utils/formatters';
 
-// Hazard marker custom icon
-const createHazardIcon = (status) =>
-  L.divIcon({
+// Hazard marker custom icon styled by status and severity
+const createHazardIcon = (status, severity) => {
+  let indicator = '';
+  const s = (status || '').toLowerCase();
+  const sev = (severity || '').toLowerCase();
+
+  if (s === 'resolved') {
+    indicator = 'safe';
+  } else if (sev === 'critical') {
+    indicator = 'critical';
+  } else if (sev === 'high') {
+    indicator = 'high';
+  } else if (s === 'verified') {
+    indicator = 'verified';
+  } else if (s === 'in_progress') {
+    indicator = 'in-progress';
+  }
+
+  return L.divIcon({
     className: '',
-    html: `<div class="marker-dot ${status === 'resolved' ? 'safe' : ''}"></div>`,
+    html: `<div class="marker-dot ${indicator}"></div>`,
     iconSize: [20, 20],
     iconAnchor: [10, 10]
   });
+};
 
 // User location custom icon
 const userIcon = L.divIcon({
@@ -35,7 +52,7 @@ function MapRecenter({ center }) {
 
 export default function MapView({ hazards = [], userLocation = null, center = null, onSelect }) {
   // Determine initial center
-  const defaultCenter = [12.8834, 74.8397]; // Default initial view if no location
+  const defaultCenter = [12.8834, 74.8397]; // Default view
   let initialCenter = defaultCenter;
 
   if (userLocation && userLocation.latitude && userLocation.longitude) {
@@ -84,7 +101,7 @@ export default function MapView({ hazards = [], userLocation = null, center = nu
           <Marker
             key={h.id}
             position={[h.latitude, h.longitude]}
-            icon={createHazardIcon(h.status)}
+            icon={createHazardIcon(h.status, h.severity)}
             eventHandlers={{ click: () => onSelect?.(h) }}
           >
             <Popup>

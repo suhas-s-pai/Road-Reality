@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Filter, LocateFixed, Plus, Search, AlertCircle, Loader2, MapPin } from 'lucide-react';
+import { Filter, LocateFixed, Plus, Search, AlertCircle, Loader2, MapPin, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import MapView from '../components/MapView';
 import HazardCard from '../components/HazardCard';
 import { getHazards, getNearbyHazards } from '../services/hazardService';
+import { categories } from '../services/mockData';
 import { useUserLocation } from '../hooks/useUserLocation';
 
 export default function Explore() {
   const [items, setItems] = useState([]);
   const [filter, setFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState(null);
@@ -73,27 +75,47 @@ export default function Explore() {
   };
 
   const filteredItems = items.filter((x) => {
-    const matchesFilter = filter === 'all' || x.status === filter || x.rawStatus?.toLowerCase() === filter;
-    const matchesSearch = searchQuery === '' ||
+    const matchesStatus =
+      filter === 'all' ||
+      (x.status && x.status.toLowerCase() === filter.toLowerCase()) ||
+      (x.rawStatus && x.rawStatus.toLowerCase() === filter.toLowerCase());
+
+    const matchesCategory =
+      categoryFilter === 'all' ||
+      (x.category && x.category.toLowerCase() === categoryFilter.toLowerCase()) ||
+      (x.hazard_type && x.hazard_type.toLowerCase() === categoryFilter.toLowerCase());
+
+    const matchesSearch =
+      searchQuery === '' ||
       (x.category && x.category.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (x.address && x.address.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (x.description && x.description.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    return matchesFilter && matchesSearch;
+    return matchesStatus && matchesCategory && matchesSearch;
   });
 
   return (
     <main className="page relative bg-surface">
-      <div className="mx-auto grid max-w-7xl gap-4 p-4 lg:grid-cols-[360px_1fr]">
+      <div className="mx-auto grid max-w-7xl gap-4 p-4 lg:grid-cols-[380px_1fr]">
         {/* Left Sidebar */}
         <aside className="order-2 lg:order-1 flex flex-col">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-black text-slate-900">Explore hazards</h1>
-            {placeName && (
-              <span className="text-xs font-bold text-brand bg-cyan-50 border border-brand/20 px-2.5 py-1 rounded-full flex items-center gap-1">
-                <MapPin size={12} /> {placeName}
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => loadHazards(latitude, longitude)}
+                disabled={loading}
+                className="p-1.5 text-slate-500 hover:text-brand hover:bg-slate-100 rounded-lg transition"
+                title="Refresh hazards"
+              >
+                <RefreshCw size={16} className={loading ? 'animate-spin text-brand' : ''} />
+              </button>
+              {placeName && (
+                <span className="text-xs font-bold text-brand bg-cyan-50 border border-brand/20 px-2.5 py-1 rounded-full flex items-center gap-1">
+                  <MapPin size={12} /> {placeName}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Search & Location Bar */}
@@ -148,20 +170,39 @@ export default function Explore() {
             </div>
           )}
 
-          {/* Status Filter */}
-          <div className="mt-3 flex gap-2 items-center">
-            <Filter size={17} className="text-slate-600 shrink-0" />
-            <select
-              className="input text-sm"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-            >
-              <option value="all">All statuses</option>
-              <option value="reported">Reported</option>
-              <option value="verified">Verified</option>
-              <option value="in_progress">In progress</option>
-              <option value="resolved">Resolved</option>
-            </select>
+          {/* Filters Bar: Status & Category */}
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {/* Status Filter */}
+            <div className="flex gap-1.5 items-center">
+              <Filter size={15} className="text-slate-500 shrink-0" />
+              <select
+                className="input text-xs font-semibold py-1.5 px-2"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+              >
+                <option value="all">All statuses</option>
+                <option value="reported">Reported</option>
+                <option value="verified">Verified</option>
+                <option value="in_progress">In progress</option>
+                <option value="resolved">Resolved</option>
+              </select>
+            </div>
+
+            {/* Category Filter */}
+            <div>
+              <select
+                className="input text-xs font-semibold py-1.5 px-2 w-full"
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+              >
+                <option value="all">All categories</option>
+                {categories.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Error Notice */}
@@ -179,7 +220,9 @@ export default function Explore() {
                 <Loader2 size={14} className="animate-spin" /> Loading hazard reports...
               </span>
             ) : (
-              `${filteredItems.length} hazard${filteredItems.length === 1 ? '' : 's'} near ${placeName || 'selected area'}`
+              `${filteredItems.length} hazard${filteredItems.length === 1 ? '' : 's'} near ${
+                placeName || 'selected area'
+              }`
             )}
           </p>
 
@@ -191,7 +234,11 @@ export default function Explore() {
               ))
             ) : filteredItems.length === 0 ? (
               <div className="card p-6 text-center text-slate-500 text-sm">
-                No hazard reports found matching your search.
+                <p className="font-bold text-slate-700">No hazard reports found</p>
+                <p className="text-xs text-slate-500 mt-1">Try clearing filters or search term.</p>
+                <Link to="/report" className="btn btn-primary text-xs mt-3 inline-flex">
+                  Report a hazard
+                </Link>
               </div>
             ) : (
               filteredItems.map((h) => <HazardCard key={h.id} hazard={h} />)

@@ -1,7 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+// Clean the Supabase URL by removing any trailing /rest/v1 or trailing slashes
+// This ensures auth, storage, and database REST endpoints resolve accurately.
+const rawUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim();
+const supabaseUrl = rawUrl.replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
+const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
 
 // Validate URL and ensure placeholder values don't crash initialization
 function isValidHttpUrl(string) {
@@ -25,7 +28,7 @@ export const isSupabaseConfigured = Boolean(
 
 if (!isSupabaseConfigured) {
   console.warn(
-    '⚠️ [Supabase Notice]: VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are using placeholders in .env.local.'
+    '⚠️ [Supabase Notice]: VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are missing or using placeholders in root .env.'
   );
 }
 

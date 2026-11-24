@@ -244,6 +244,48 @@ textarea:focus-visible {
   animation: livePulse 1.8s ease-out infinite;
 }
 
+/* Map Hazard Marker Dots */
+.marker-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: #ea580c;
+  border: 2px solid white;
+  box-shadow: 0 0 10px rgba(234, 88, 12, 0.7);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.marker-dot:hover {
+  transform: scale(1.3);
+}
+
+.marker-dot.safe {
+  background-color: #10b981;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.7);
+}
+
+.marker-dot.critical {
+  background-color: #ef4444;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.85);
+  animation: livePulse 1.4s ease-out infinite;
+}
+
+.marker-dot.high {
+  background-color: #f97316;
+  box-shadow: 0 0 10px rgba(249, 115, 22, 0.7);
+}
+
+.marker-dot.verified {
+  border-color: #3b82f6;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.7);
+}
+
+.marker-dot.in-progress {
+  background-color: #8b5cf6;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.7);
+}
+
 .hero-route {
   position: absolute;
   width: 170%;

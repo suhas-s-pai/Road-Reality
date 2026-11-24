@@ -131,11 +131,7 @@ export default function Auth() {
           </div>
         )}
 
-        <div className="mt-8 border-t pt-4">
-          <Link to="/explore" className="text-xs font-bold text-brand hover:underline">
-            ← Explore map without signing in
-          </Link>
-        </div>
+
       </div>
     </main>
   );

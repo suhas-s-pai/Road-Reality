@@ -39,6 +39,7 @@ async function syncUserProfile(user) {
           id: user.id,
           email: user.email,
           name: fullName,
+          full_name: fullName,
           avatar_url: avatarUrl
         },
         { onConflict: 'id', ignoreDuplicates: false }
