@@ -32,23 +32,39 @@ async function syncUserProfile(user) {
   const avatarUrl = user.user_metadata?.avatar_url || '';
 
   try {
-    const { error: upsertErr } = await supabase
+    // Check if profile exists first to strictly preserve existing role (e.g. 'admin')
+    const { data: existingProfile } = await supabase
       .from('profiles')
-      .upsert(
-        {
+      .select('id, role')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (!existingProfile) {
+      const { error: insertErr } = await supabase
+        .from('profiles')
+        .insert({
           id: user.id,
           email: user.email,
           name: fullName,
           full_name: fullName,
-          avatar_url: avatarUrl
-        },
-        { onConflict: 'id', ignoreDuplicates: false }
-      );
-
-    if (upsertErr) {
-      console.warn('[Auth] Supabase profile sync notice:', upsertErr.message);
+          avatar_url: avatarUrl,
+          role: 'user'
+        });
+      if (insertErr) console.warn('[Auth] Supabase profile insert notice:', insertErr.message);
+      else console.log('[Auth] New profile created for:', user.email);
     } else {
-      console.log('[Auth] Profile synced successfully for:', user.email);
+      const { error: updateErr } = await supabase
+        .from('profiles')
+        .update({
+          email: user.email,
+          name: fullName,
+          full_name: fullName,
+          avatar_url: avatarUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+      if (updateErr) console.warn('[Auth] Supabase profile update notice:', updateErr.message);
+      else console.log('[Auth] Profile synced (role preserved:', existingProfile.role, ') for:', user.email);
     }
   } catch (err) {
     console.warn('[Auth] Profile sync warning:', err.message);

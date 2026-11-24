@@ -128,6 +128,7 @@ ALTER TABLE public.hazard_reports ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECI
 ALTER TABLE public.hazard_reports ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
 ALTER TABLE public.hazard_reports ADD COLUMN IF NOT EXISTS address TEXT;
 ALTER TABLE public.hazard_reports ADD COLUMN IF NOT EXISTS photo_url TEXT;
+ALTER TABLE public.hazard_reports ADD COLUMN IF NOT EXISTS assigned_to TEXT;
 ALTER TABLE public.hazard_reports ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now());
 ALTER TABLE public.hazard_reports ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now());
 
@@ -251,8 +252,22 @@ CREATE POLICY "Users can delete their own hazard-images"
   );
 
 -- ==============================================================================
--- 6. VERIFICATION QUERY
+-- 6. PROMOTE PRIMARY ADMINISTRATOR ACCOUNT (suhaspai13@gmail.com)
+-- ==============================================================================
+-- This promotes suhaspai13@gmail.com to administrator role if the user already exists.
+UPDATE public.profiles
+SET role = 'admin', updated_at = timezone('utc'::text, now())
+WHERE id = (SELECT id FROM auth.users WHERE email = 'suhaspai13@gmail.com' LIMIT 1);
+
+-- Also update by email on profiles table if already synced:
+UPDATE public.profiles
+SET role = 'admin', updated_at = timezone('utc'::text, now())
+WHERE email = 'suhaspai13@gmail.com';
+
+-- ==============================================================================
+-- 7. VERIFICATION QUERY
 -- ==============================================================================
 SELECT 'Road Reality migration completed successfully!' AS status,
        (SELECT count(*) FROM public.hazard_reports) AS total_hazard_reports,
-       (SELECT count(*) FROM public.profiles) AS total_profiles;
+       (SELECT count(*) FROM public.profiles) AS total_profiles,
+       (SELECT count(*) FROM public.profiles WHERE role = 'admin') AS total_admins;

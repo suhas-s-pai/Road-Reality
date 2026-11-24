@@ -27,6 +27,7 @@ export function normalizeReport(r) {
   return {
     id: r.id || `RR-${Math.floor(1000 + Math.random() * 8999)}`,
     user_id: r.user_id || null,
+    assigned_to: r.assigned_to || '',
     category: r.hazard_type || r.category || 'Other',
     hazard_type: r.hazard_type || r.category || 'Other',
     imageUrl: r.photo_url || r.imageUrl || '',
@@ -335,6 +336,36 @@ export async function updateHazardStatus(id, status, token) {
   if (!res.ok) {
     const errData = await res.json().catch(() => ({}));
     throw new Error(errData.message || 'Failed to update hazard status');
+  }
+
+  const json = await res.json();
+  return { data: normalizeReport(json.report) };
+}
+
+/**
+ * Update report status and/or authority assignment (Admin only)
+ */
+export async function updateAdminReport(id, { status, assigned_to }, token) {
+  if (!token) {
+    throw new Error('Authentication required for updating report');
+  }
+
+  const payload = {};
+  if (status) payload.status = status;
+  if (assigned_to !== undefined) payload.assigned_to = assigned_to;
+
+  const res = await fetch(`${base}/admin/reports/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.message || 'Failed to update report via admin API');
   }
 
   const json = await res.json();
