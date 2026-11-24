@@ -54,10 +54,7 @@ function AdminRoute() {
     return <Navigate to="/login" replace />;
   }
 
-  if (!isAdmin) {
-    return <Navigate to="/" replace />;
-  }
-
+  // AdminDashboard handles role check and displays clear Access Restricted message if role !== 'admin'
   return <AdminDashboard />;
 }
 

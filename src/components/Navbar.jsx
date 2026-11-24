@@ -1,46 +1,57 @@
 import { Link, NavLink } from 'react-router-dom';
-import { Menu, ShieldAlert, X, LogOut, User, Shield } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Menu, ShieldAlert, X, LogOut, User, Shield, AlertTriangle, MapPin, Home as HomeIcon, FileText, Bell } from 'lucide-react';
+import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
-  const { user, role, isAdmin, signOut, loading } = useAuth();
+  const { user, isAdmin, signOut, loading } = useAuth();
 
-  useEffect(() => {
-    if (!user) return;
-    console.info('[Navbar] Admin Dashboard visibility:', {
-      userId: user.id,
-      role,
-      isAdmin
-    });
-  }, [user, role, isAdmin]);
-
-  const userName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'User';
+  const userName =
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.name ||
+    user?.email?.split('@')[0] ||
+    'User';
   const avatarUrl = user?.user_metadata?.avatar_url;
 
   return (
-    <header className="sticky top-0 z-[1000] border-b bg-white/95 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
+    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
         {/* Brand Logo */}
-        <Link to="/" className="flex items-center gap-2 font-bold text-ink">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand text-white">
+        <Link to="/" className="flex items-center gap-2.5 font-extrabold text-slate-900 text-lg tracking-tight">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-teal-600 text-white shadow-sm">
             <ShieldAlert size={20} />
           </span>
-          Road Reality
+          <span>Road Reality</span>
         </Link>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden items-center gap-5 md:flex">
+        {/* Desktop Navigation Links */}
+        <nav className="hidden items-center gap-1 md:flex lg:gap-2">
           <NavLink
-            to="/explore"
+            to="/"
+            end
             className={({ isActive }) =>
-              `text-sm font-medium transition ${
-                isActive ? 'font-bold text-brand' : 'text-slate-600 hover:text-brand'
+              `px-3 py-2 rounded-lg text-sm font-semibold transition ${
+                isActive
+                  ? 'text-teal-700 bg-teal-50 font-bold'
+                  : 'text-slate-600 hover:text-teal-600 hover:bg-slate-50'
               }`
             }
           >
-            Explore
+            Home
+          </NavLink>
+
+          <NavLink
+            to="/explore"
+            className={({ isActive }) =>
+              `px-3 py-2 rounded-lg text-sm font-semibold transition ${
+                isActive
+                  ? 'text-teal-700 bg-teal-50 font-bold'
+                  : 'text-slate-600 hover:text-teal-600 hover:bg-slate-50'
+              }`
+            }
+          >
+            Explore Map
           </NavLink>
 
           {user && (
@@ -48,19 +59,23 @@ export default function Navbar() {
               <NavLink
                 to="/my-reports"
                 className={({ isActive }) =>
-                  `text-sm font-medium transition ${
-                    isActive ? 'font-bold text-brand' : 'text-slate-600 hover:text-brand'
+                  `px-3 py-2 rounded-lg text-sm font-semibold transition ${
+                    isActive
+                      ? 'text-teal-700 bg-teal-50 font-bold'
+                      : 'text-slate-600 hover:text-teal-600 hover:bg-slate-50'
                   }`
                 }
               >
-                My reports
+                My Reports
               </NavLink>
 
               <NavLink
                 to="/notifications"
                 className={({ isActive }) =>
-                  `text-sm font-medium transition ${
-                    isActive ? 'font-bold text-brand' : 'text-slate-600 hover:text-brand'
+                  `px-3 py-2 rounded-lg text-sm font-semibold transition ${
+                    isActive
+                      ? 'text-teal-700 bg-teal-50 font-bold'
+                      : 'text-slate-600 hover:text-teal-600 hover:bg-slate-50'
                   }`
                 }
               >
@@ -69,74 +84,116 @@ export default function Navbar() {
             </>
           )}
 
-          {/* Admin Navigation Badge (Only shown if user is Admin) */}
+          {/* DEDICATED ADMIN DASHBOARD BUTTON (Clearly visible for authorized admins) */}
           {isAdmin && (
             <NavLink
               to="/admin"
               className={({ isActive }) =>
-                `btn flex items-center gap-1.5 ${
-                  isActive ? 'btn-primary' : 'btn-secondary text-brand border-brand/30'
+                `ml-1 flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold tracking-wide transition shadow-sm ${
+                  isActive
+                    ? 'bg-amber-600 text-white ring-2 ring-amber-300'
+                    : 'bg-amber-500 hover:bg-amber-600 text-white'
                 }`
               }
+              title="Open Authority Administration Console"
             >
-              <Shield size={16} />
+              <Shield size={14} className="fill-white/20" />
               Admin Dashboard
             </NavLink>
           )}
+        </nav>
 
-          <Link className="btn btn-primary" to="/report">
-            Report a hazard
+        {/* Right Action Section */}
+        <div className="hidden items-center gap-3 md:flex">
+          <Link
+            to="/report"
+            className="btn btn-accent text-xs font-bold py-2 px-4 shadow-sm flex items-center gap-1.5"
+          >
+            <AlertTriangle size={15} />
+            Report an Issue
           </Link>
 
-          {/* User Auth Section */}
           {loading ? (
-            <div className="h-8 w-20 animate-pulse rounded-lg bg-slate-200" />
+            <div className="h-8 w-16 animate-pulse rounded-lg bg-slate-100" />
           ) : user ? (
-            <div className="flex items-center gap-3 border-l pl-4">
-              <Link to="/profile" className="flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-brand">
+            <div className="flex items-center gap-2.5 border-l border-slate-200 pl-3">
+              <Link
+                to="/profile"
+                className="flex items-center gap-2 rounded-lg p-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                title="View user profile"
+              >
                 {avatarUrl ? (
-                  <img src={avatarUrl} alt={userName} className="h-8 w-8 rounded-full object-cover border" />
+                  <img src={avatarUrl} alt={userName} className="h-7 w-7 rounded-full object-cover border border-slate-200" />
                 ) : (
-                  <div className="grid h-8 w-8 place-items-center rounded-full bg-slate-100 text-slate-700 border">
-                    <User size={16} />
+                  <div className="grid h-7 w-7 place-items-center rounded-full bg-teal-100 text-teal-800 font-bold text-xs">
+                    {userName[0]?.toUpperCase() || <User size={13} />}
                   </div>
                 )}
-                <span className="max-w-[120px] truncate">{userName}</span>
+                <span className="max-w-[100px] truncate text-slate-900 font-medium">{userName}</span>
               </Link>
+
               <button
                 onClick={signOut}
                 title="Sign out"
-                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-red-600 transition"
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition"
               >
-                <LogOut size={18} />
+                <LogOut size={16} />
               </button>
             </div>
           ) : (
-            <Link to="/login" className="btn btn-secondary">
+            <Link to="/login" className="btn btn-secondary text-xs py-2 px-3">
               Sign in with Google
             </Link>
           )}
-        </nav>
+        </div>
 
-        {/* Mobile Menu Button */}
+        {/* Mobile Hamburger Button */}
         <button
-          aria-label="Open navigation"
-          className="md:hidden p-2 text-slate-700"
+          aria-label="Toggle navigation menu"
+          className="md:hidden p-2 text-slate-700 rounded-lg hover:bg-slate-100"
           onClick={() => setOpen(!open)}
         >
-          {open ? <X /> : <Menu />}
+          {open ? <X size={22} /> : <Menu size={22} />}
         </button>
       </div>
 
       {/* Mobile Drawer */}
       {open && (
-        <nav className="border-t bg-white p-4 space-y-2 md:hidden">
+        <nav className="border-t border-slate-200 bg-white p-4 space-y-2 md:hidden shadow-lg animate-in fade-in slide-in-from-top-2">
+          <NavLink
+            onClick={() => setOpen(false)}
+            to="/"
+            end
+            className={({ isActive }) =>
+              `flex items-center gap-2.5 rounded-xl p-3 text-sm font-semibold ${
+                isActive ? 'bg-teal-50 text-teal-800 font-bold' : 'text-slate-700 hover:bg-slate-50'
+              }`
+            }
+          >
+            <HomeIcon size={18} className="text-teal-600" />
+            Home
+          </NavLink>
+
           <NavLink
             onClick={() => setOpen(false)}
             to="/explore"
-            className="block rounded-lg p-3 font-medium text-slate-700 hover:bg-slate-50"
+            className={({ isActive }) =>
+              `flex items-center gap-2.5 rounded-xl p-3 text-sm font-semibold ${
+                isActive ? 'bg-teal-50 text-teal-800 font-bold' : 'text-slate-700 hover:bg-slate-50'
+              }`
+            }
           >
-            Explore
+            <MapPin size={18} className="text-teal-600" />
+            Explore Map
+          </NavLink>
+
+          <NavLink
+            onClick={() => setOpen(false)}
+            to="/report"
+            className="flex items-center gap-2.5 rounded-xl p-3 text-sm font-bold bg-orange-500 text-white"
+          >
+            <AlertTriangle size={18} />
+            Report an Issue
           </NavLink>
 
           {user && (
@@ -144,67 +201,76 @@ export default function Navbar() {
               <NavLink
                 onClick={() => setOpen(false)}
                 to="/my-reports"
-                className="block rounded-lg p-3 font-medium text-slate-700 hover:bg-slate-50"
+                className={({ isActive }) =>
+                  `flex items-center gap-2.5 rounded-xl p-3 text-sm font-semibold ${
+                    isActive ? 'bg-teal-50 text-teal-800 font-bold' : 'text-slate-700 hover:bg-slate-50'
+                  }`
+                }
               >
-                My reports
+                <FileText size={18} className="text-teal-600" />
+                My Reports
               </NavLink>
 
               <NavLink
                 onClick={() => setOpen(false)}
                 to="/notifications"
-                className="block rounded-lg p-3 font-medium text-slate-700 hover:bg-slate-50"
+                className={({ isActive }) =>
+                  `flex items-center gap-2.5 rounded-xl p-3 text-sm font-semibold ${
+                    isActive ? 'bg-teal-50 text-teal-800 font-bold' : 'text-slate-700 hover:bg-slate-50'
+                  }`
+                }
               >
+                <Bell size={18} className="text-teal-600" />
                 Notifications
               </NavLink>
             </>
           )}
 
+          {/* Mobile Dedicated Admin Dashboard Button */}
           {isAdmin && (
             <NavLink
               onClick={() => setOpen(false)}
               to="/admin"
-              className="block rounded-lg p-3 font-bold text-amber-800 bg-amber-50 hover:bg-amber-100"
+              className="flex items-center gap-2.5 rounded-xl p-3 text-sm font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-sm"
             >
-              🛡️ Admin Dashboard
+              <Shield size={18} />
+              Admin Dashboard
             </NavLink>
           )}
 
-          <Link
-            onClick={() => setOpen(false)}
-            to="/report"
-            className="btn btn-primary mt-2 w-full justify-center"
-          >
-            Report a hazard
-          </Link>
-
-          <div className="border-t pt-3 mt-3">
+          <div className="border-t border-slate-200 pt-3 mt-3">
             {user ? (
               <div className="flex items-center justify-between p-2">
-                <div className="flex items-center gap-2">
+                <Link
+                  to="/profile"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2 text-sm font-bold text-slate-800"
+                >
                   {avatarUrl ? (
-                    <img src={avatarUrl} alt={userName} className="h-8 w-8 rounded-full border" />
+                    <img src={avatarUrl} alt={userName} className="h-8 w-8 rounded-full border border-slate-200" />
                   ) : (
-                    <div className="grid h-8 w-8 place-items-center rounded-full bg-slate-100 border">
-                      <User size={16} />
+                    <div className="grid h-8 w-8 place-items-center rounded-full bg-teal-100 text-teal-800 font-bold text-xs">
+                      {userName[0]?.toUpperCase() || <User size={15} />}
                     </div>
                   )}
-                  <span className="font-bold text-sm text-slate-800">{userName}</span>
-                </div>
+                  <span>{userName}</span>
+                </Link>
+
                 <button
                   onClick={() => {
                     signOut();
                     setOpen(false);
                   }}
-                  className="btn btn-secondary text-red-600 text-xs py-1.5"
+                  className="btn btn-secondary text-red-600 text-xs py-1.5 px-3"
                 >
-                  Sign out
+                  Sign Out
                 </button>
               </div>
             ) : (
               <Link
                 onClick={() => setOpen(false)}
                 to="/login"
-                className="btn btn-secondary w-full justify-center"
+                className="btn btn-primary w-full justify-center text-sm"
               >
                 Sign in with Google
               </Link>

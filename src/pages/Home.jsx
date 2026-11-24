@@ -1,114 +1,40 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
-  ArrowRight,
-  BadgeCheck,
-  BellRing,
-  Camera,
-  CheckCircle2,
-  Clock3,
-  Compass,
-  MapPin,
-  Navigation,
-  Route,
-  ShieldCheck,
-  TriangleAlert,
-  Upload,
-  Users,
   AlertTriangle,
-  Search,
-  Loader2
-} from "lucide-react";
+  MapPin,
+  ArrowRight,
+  ShieldCheck,
+  CheckCircle,
+  Clock,
+  Car,
+  ChevronRight,
+  Activity,
+  Layers,
+  Users,
+  Compass
+} from 'lucide-react';
+import { getHazards, getNearbyHazards } from '../services/hazardService';
+import { useUserLocation } from '../hooks/useUserLocation';
+import { Badge } from '../components/Badges';
 
-import HazardCard from "../components/HazardCard";
-import { getHazards, getNearbyHazards } from "../services/hazardService";
-import { useUserLocation } from "../hooks/useUserLocation";
-
-const categoryItems = [
-  {
-    icon: "🕳️",
-    title: "Potholes",
-    description: "Road-surface damage that can affect every vehicle.",
-  },
-  {
-    icon: "🌊",
-    title: "Waterlogging",
-    description: "Flooded roads, drainage issues, and unsafe crossings.",
-  },
-  {
-    icon: "🌳",
-    title: "Fallen trees",
-    description: "Obstructions caused by storms or damaged roadside trees.",
-  },
-  {
-    icon: "🚧",
-    title: "Blocked roads",
-    description: "Closures, debris, diversions, and access restrictions.",
-  },
-  {
-    icon: "💡",
-    title: "Streetlights",
-    description: "Broken streetlights and low-visibility safety concerns.",
-  },
-];
-
-const workflowSteps = [
-  {
-    number: "01",
-    icon: Camera,
-    title: "Report",
-    description:
-      "Share what you see with a photo, location, severity, and traffic impact.",
-  },
-  {
-    number: "02",
-    icon: BadgeCheck,
-    title: "Verify",
-    description:
-      "Reports gain confidence through the community and authority review.",
-  },
-  {
-    number: "03",
-    icon: Compass,
-    title: "Track",
-    description:
-      "See updates, road conditions, and progress directly on the map.",
-  },
-  {
-    number: "04",
-    icon: ShieldCheck,
-    title: "Resolve",
-    description:
-      "Follow hazards until they are addressed and marked resolved.",
-  },
+const categoriesGrid = [
+  { name: 'Pothole', desc: 'Craters, road cracks & surface damage', icon: '🕳️' },
+  { name: 'Waterlogging', desc: 'Flooded streets & drainage blocks', icon: '🌊' },
+  { name: 'Fallen Tree', desc: 'Blocked branches & storm damage', icon: '🌳' },
+  { name: 'Road Debris', desc: 'Spills, gravel, glass & obstacles', icon: '🚧' },
+  { name: 'Broken Streetlight', desc: 'Dark road stretches & electrical hazards', icon: '💡' },
+  { name: 'Blocked Road', desc: 'Closures, accidents & diversions', icon: '⛔' }
 ];
 
 export default function Home() {
-  const {
-    location,
-    latitude,
-    longitude,
-    placeName,
-    loading: locLoading,
-    manualLoading,
-    error: locError,
-    permissionState,
-    requestLocation,
-    setManualLocation
-  } = useUserLocation(true);
-
+  const { latitude, longitude, placeName, loading: locLoading } = useUserLocation(true);
   const [reports, setReports] = useState([]);
   const [loadingReports, setLoadingReports] = useState(true);
-  const [fetchError, setFetchError] = useState(null);
-  const [manualInput, setManualInput] = useState("");
-  const [showManualForm, setShowManualForm] = useState(false);
-  const [manualError, setManualError] = useState(null);
 
-  // Fetch hazards based on current real or manual location
   useEffect(() => {
-    async function loadData() {
+    async function loadReports() {
       setLoadingReports(true);
-      setFetchError(null);
       try {
         let res;
         if (latitude && longitude) {
@@ -118,559 +44,301 @@ export default function Home() {
         }
         setReports(res.data || []);
       } catch (err) {
-        console.error("Error loading home reports:", err);
-        setFetchError("Road Reality server is unavailable. Please try again.");
+        console.warn('Could not load reports for home:', err.message);
       } finally {
         setLoadingReports(false);
       }
     }
-    loadData();
+    loadReports();
   }, [latitude, longitude]);
 
-  const handleManualSubmit = async (e) => {
-    e.preventDefault();
-    if (!manualInput.trim()) return;
-    setManualError(null);
-    try {
-      await setManualLocation(manualInput);
-      setShowManualForm(false);
-      setManualInput("");
-    } catch (err) {
-      setManualError(err.message || "Could not find that location. Try another city or area.");
-    }
-  };
-
-  const previewReports = reports.slice(0, 2);
+  const recentReports = reports.slice(0, 3);
+  const activeCount = reports.filter((r) => (r.status || '').toUpperCase() !== 'RESOLVED').length;
+  const resolvedCount = reports.filter((r) => (r.status || '').toUpperCase() === 'RESOLVED').length;
 
   return (
-    <main className="page paper-texture overflow-hidden">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-[#202624] text-[#FCFAF5]">
-        <div className="map-grid-texture absolute inset-0 opacity-80" />
-
-        <div className="absolute -left-40 top-24 h-80 w-80 rounded-full bg-[#B85C45]/10 blur-3xl" />
-        <div className="absolute -right-24 bottom-0 h-72 w-72 rounded-full bg-[#236B6B]/20 blur-3xl" />
-
-        <div className="relative mx-auto grid max-w-7xl gap-12 px-4 py-14 sm:px-6 md:py-20 lg:grid-cols-[1fr_0.95fr] lg:items-center lg:px-8 lg:py-24">
-          {/* Hero text */}
-          <div className="animate-rise">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-2 text-xs font-bold tracking-[0.14em] text-[#E5B45D]">
-              <span className="live-dot" aria-hidden="true" />
-              LIVE ROAD INTELLIGENCE
+    <main className="bg-white text-slate-900 min-h-screen">
+      {/* 1. HERO SECTION (Clean, Light, Obvious Actions) */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-teal-50/60 via-white to-white border-b border-slate-100 py-16 sm:py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto">
+            {/* Live Status Pill */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-100/80 border border-teal-200 text-teal-800 text-xs font-bold tracking-wide mb-6">
+              <span className="h-2 w-2 rounded-full bg-teal-600 animate-pulse" />
+              LIVE ROAD HAZARD TRACKING
             </div>
 
-            <p className="mt-7 text-sm font-bold uppercase tracking-[0.2em] text-[#DDB4A6]">
-              Road Reality
-            </p>
-
-            <h1 className="font-editorial mt-4 max-w-3xl text-4xl font-extrabold leading-[0.98] text-white sm:text-5xl md:text-6xl lg:text-7xl">
-              Know the road
-              <br />
-              before you take it.
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.1]">
+              Know road dangers <br />
+              <span className="text-teal-600">before you drive.</span>
             </h1>
 
-            <p className="mt-6 max-w-xl text-base leading-7 text-[#D7DED8] sm:text-lg">
-              Real-time local hazard reports from the people who are actually
-              on the road. See what is happening nearby, make safer decisions,
-              and help your community travel better.
+            <p className="mt-5 text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto">
+              Real-time road hazard reports from citizens on the ground. Spot dangerous potholes, flooded streets, and road obstacles before they cause accidents.
             </p>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link to="/report" className="btn btn-primary">
-                <TriangleAlert size={18} aria-hidden="true" />
-                Report a hazard
-                <ArrowRight size={17} aria-hidden="true" />
+            {/* MAIN ACTIONS (Obvious, Vibrant Teal & Orange) */}
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-4">
+              <Link
+                to="/report"
+                className="btn btn-accent w-full sm:w-auto text-sm font-bold py-3.5 px-7 shadow-md flex items-center justify-center gap-2"
+              >
+                <AlertTriangle size={18} />
+                Report an Issue
+                <ArrowRight size={16} />
               </Link>
 
               <Link
                 to="/explore"
-                className="btn border border-white/20 bg-white/5 text-white hover:border-white/35 hover:bg-white/10"
+                className="btn btn-primary w-full sm:w-auto text-sm font-bold py-3.5 px-7 shadow-md flex items-center justify-center gap-2"
               >
-                <MapPin size={18} aria-hidden="true" />
-                Explore the map
+                <MapPin size={18} />
+                Explore Live Map
               </Link>
             </div>
 
-            <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-[#C7CEC8]">
-              <span className="inline-flex items-center gap-2">
-                <CheckCircle2 size={17} className="text-[#86B898]" />
-                Community-powered reports
-              </span>
-
-              <span className="inline-flex items-center gap-2">
-                <Clock3 size={17} className="text-[#E5B45D]" />
-                Updates as conditions change
-              </span>
-            </div>
-          </div>
-
-          {/* Hero road intelligence preview */}
-          <div className="animate-rise-delay relative mx-auto w-full max-w-xl lg:max-w-none">
-            <div className="relative min-h-[440px] overflow-hidden rounded-[28px] border border-white/10 bg-[#33403B] shadow-2xl shadow-black/30 sm:min-h-[480px]">
-              <div className="map-grid-texture absolute inset-0 opacity-60" />
-
-              <div className="hero-route -left-36 -top-24" />
-              <div className="hero-route -bottom-56 -right-36 opacity-60" />
-
-              <div className="absolute left-[20%] top-[24%] h-2 w-2 rounded-full bg-[#E5B45D] shadow-[0_0_0_7px_rgba(229,180,93,0.16)]" />
-              <div className="absolute right-[23%] top-[47%] h-2 w-2 rounded-full bg-[#86B898] shadow-[0_0_0_7px_rgba(134,184,152,0.13)]" />
-              <div className="absolute bottom-[22%] left-[35%] h-2 w-2 rounded-full bg-[#D8705C] shadow-[0_0_0_7px_rgba(216,112,92,0.16)]" />
-
-              {/* Location Header - NEAR YOU */}
-              <div className="absolute left-5 right-5 top-5 flex items-center justify-between z-10">
-                <div className="rounded-xl border border-white/10 bg-[#202624]/85 px-4 py-2.5 backdrop-blur-md min-w-[200px]">
-                  <p className="text-[10px] font-bold tracking-[0.15em] text-[#DDB4A6]">
-                    NEAR YOU
-                  </p>
-                  <p className="mt-0.5 text-sm font-extrabold text-white truncate max-w-[240px]">
-                    {locLoading ? (
-                      "Finding your location..."
-                    ) : manualLoading ? (
-                      "Searching location..."
-                    ) : placeName ? (
-                      placeName
-                    ) : (
-                      "Location required"
-                    )}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setShowManualForm(!showManualForm)}
-                    className="rounded-xl border border-white/10 bg-[#202624]/85 px-3 py-2 text-xs font-bold text-[#D7DED8] backdrop-blur-md hover:bg-white/10 transition"
-                    title="Enter location manually"
-                  >
-                    Change
-                  </button>
-                  <button
-                    onClick={requestLocation}
-                    disabled={locLoading}
-                    className="rounded-xl border border-white/10 bg-[#202624]/85 p-2.5 backdrop-blur-md hover:bg-white/10 transition"
-                    title="Use GPS current location"
-                  >
-                    <Navigation
-                      size={18}
-                      className={locLoading ? "animate-spin text-[#E5B45D]" : "text-[#E5B45D]"}
-                      aria-label="Current GPS location"
-                    />
-                  </button>
-                </div>
+            {/* Quick Metrics Bar */}
+            <div className="mt-12 grid grid-cols-3 gap-4 max-w-xl mx-auto pt-8 border-t border-slate-200/80 text-center">
+              <div>
+                <p className="text-2xl sm:text-3xl font-black text-slate-900">{reports.length || 0}</p>
+                <p className="text-xs font-semibold text-slate-500 mt-0.5">Total Reports</p>
               </div>
-
-              {/* Manual Location Entry Form Overlay */}
-              {showManualForm && (
-                <div className="absolute top-[22%] left-5 right-5 z-30 rounded-2xl border border-white/20 bg-[#202624]/95 p-4 backdrop-blur-md shadow-2xl">
-                  <p className="text-xs font-bold text-[#E5B45D]">Enter your city, area, or landmark:</p>
-                  <form onSubmit={handleManualSubmit} className="mt-2 flex gap-2">
-                    <input
-                      className="input py-2 px-3 text-xs flex-1 bg-white/10 border-white/20 text-white placeholder-slate-400 focus:bg-white/15"
-                      placeholder="e.g. Mangaluru, Indiranagar, MG Road"
-                      value={manualInput}
-                      onChange={(e) => setManualInput(e.target.value)}
-                    />
-                    <button
-                      type="submit"
-                      disabled={manualLoading}
-                      className="btn btn-primary text-xs py-2 px-3 flex items-center gap-1"
-                    >
-                      {manualLoading ? <Loader2 size={14} className="animate-spin" /> : "Set"}
-                    </button>
-                  </form>
-                  {manualError && (
-                    <p className="mt-2 text-xs font-medium text-red-400">{manualError}</p>
-                  )}
-                </div>
-              )}
-
-              {/* Location Required Banner if automatic location is not available and no manual location */}
-              {!location && !locLoading && !manualLoading && (
-                <div className="absolute top-[26%] left-5 right-5 rounded-2xl border border-amber-500/40 bg-[#202624]/95 p-5 text-center backdrop-blur-md shadow-xl z-20">
-                  <AlertTriangle className="mx-auto text-amber-400 mb-2" size={28} />
-                  <p className="text-sm font-bold text-white">Location access is required</p>
-                  <p className="text-xs text-[#C7CEC8] mt-1 leading-relaxed">
-                    Road Reality needs your location to show nearby road hazards.
-                  </p>
-
-                  <div className="mt-4 flex flex-col sm:flex-row justify-center gap-2">
-                    <button
-                      onClick={requestLocation}
-                      className="btn btn-primary text-xs py-2 px-4 justify-center"
-                    >
-                      <Navigation size={14} />
-                      Allow GPS Location
-                    </button>
-                    <button
-                      onClick={() => setShowManualForm(true)}
-                      className="btn border border-white/20 bg-white/10 text-white hover:bg-white/20 text-xs py-2 px-4 justify-center"
-                    >
-                      <Search size={14} />
-                      Enter location manually
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Road conditions summary box */}
-              <div className="absolute bottom-5 left-5 right-5 rounded-2xl border border-white/10 bg-[#202624]/85 p-4 backdrop-blur-md">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] font-bold tracking-[0.15em] text-[#DDB4A6]">
-                      ROAD CONDITIONS
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-white">
-                      {location ? `${reports.length} active report${reports.length === 1 ? '' : 's'} nearby` : 'Select location to view hazards'}
-                    </p>
-                  </div>
-
-                  <span className="rounded-full bg-[#476C55] px-2.5 py-1 text-xs font-bold text-white">
-                    {location ? "Updated now" : "Location needed"}
-                  </span>
-                </div>
-
-                <div className="route-line mt-4 opacity-70" />
-
-                <div className="mt-3 flex items-center justify-between text-xs text-[#C7CEC8]">
-                  <span className="inline-flex items-center gap-1.5">
-                    <Route size={14} aria-hidden="true" />
-                    {placeName || "Location not set"}
-                  </span>
-
-                  <span>{location ? (location.isManual ? "Manual location" : "Current location") : "GPS required"}</span>
-                </div>
+              <div className="border-x border-slate-200">
+                <p className="text-2xl sm:text-3xl font-black text-orange-500">{activeCount || 0}</p>
+                <p className="text-xs font-semibold text-slate-500 mt-0.5">Active Hazards</p>
               </div>
-
-              {/* Floating live report cards */}
-              {location && previewReports.length > 0 && previewReports[0] && (
-                <div className="animate-float-slow absolute left-4 top-[31%] w-[220px] rounded-2xl border border-white/70 bg-[#FCFAF5] p-3.5 text-[#202624] shadow-xl shadow-black/20 sm:left-7 sm:w-[245px]">
-                  <div className="flex items-start gap-3">
-                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#FBE5DD] text-lg">
-                      ⚠️
-                    </span>
-
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="truncate text-sm font-extrabold">
-                          {previewReports[0].category}
-                        </p>
-
-                        <span className="rounded-full bg-[#FBE5DD] px-2 py-0.5 text-[10px] font-bold text-[#9D4936] capitalize">
-                          {previewReports[0].severity}
-                        </span>
-                      </div>
-
-                      <p className="mt-1 truncate text-xs text-[#66706B]">
-                        {previewReports[0].address || placeName}
-                      </p>
-
-                      <p className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-[#476C55]">
-                        <BadgeCheck size={13} aria-hidden="true" />
-                        {previewReports[0].verificationStatus}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {location && previewReports.length > 1 && previewReports[1] && (
-                <div className="animate-float-delayed absolute right-3 top-[52%] w-[205px] rounded-2xl border border-white/70 bg-white p-3.5 text-[#202624] shadow-xl shadow-black/20 sm:right-7 sm:w-[225px]">
-                  <div className="flex items-start gap-3">
-                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#E3F0F0] text-lg">
-                      ⚠️
-                    </span>
-
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="truncate text-sm font-extrabold">
-                          {previewReports[1].category}
-                        </p>
-
-                        <span className="rounded-full bg-[#FFF2D7] px-2 py-0.5 text-[10px] font-bold text-[#8C5B0F] capitalize">
-                          {previewReports[1].severity}
-                        </span>
-                      </div>
-
-                      <p className="mt-1 truncate text-xs text-[#66706B]">
-                        {previewReports[1].address || placeName}
-                      </p>
-
-                      <p className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-[#66706B]">
-                        <Clock3 size={13} aria-hidden="true" />
-                        Reported recently
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
+              <div>
+                <p className="text-2xl sm:text-3xl font-black text-teal-600">{resolvedCount || 0}</p>
+                <p className="text-xs font-semibold text-slate-500 mt-0.5">Resolved Fixes</p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Trust strip */}
-      <section className="border-y border-[#E8DDCA] bg-[#F4EFE4]">
-        <div className="mx-auto grid max-w-7xl gap-5 px-4 py-6 sm:grid-cols-3 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-full bg-white text-[#476C55] shadow-sm">
-              <Users size={19} aria-hidden="true" />
-            </span>
-
+      {/* 2. RECENT ROAD HAZARDS (Real Supabase Data) */}
+      <section className="py-14 bg-slate-50 border-b border-slate-200">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <div>
-              <p className="text-sm font-bold text-[#202624]">
-                Built by people on the road
-              </p>
-              <p className="text-xs text-[#66706B]">
-                Local reports, shared when they matter.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-full bg-white text-[#B9771D] shadow-sm">
-              <BadgeCheck size={19} aria-hidden="true" />
-            </span>
-
-            <div>
-              <p className="text-sm font-bold text-[#202624]">
-                Clear verification status
-              </p>
-              <p className="text-xs text-[#66706B]">
-                Know what is community-reported or verified.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-full bg-white text-[#236B6B] shadow-sm">
-              <BellRing size={19} aria-hidden="true" />
-            </span>
-
-            <div>
-              <p className="text-sm font-bold text-[#202624]">
-                Updates that follow the road
-              </p>
-              <p className="text-xs text-[#66706B]">
-                Track reports from discovery to resolution.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Categories */}
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="max-w-2xl">
-          <p className="text-xs font-bold tracking-[0.16em] text-[#B85C45]">
-            WHAT PEOPLE REPORT
-          </p>
-
-          <h2 className="font-editorial mt-3 text-3xl font-extrabold leading-tight text-[#202624] sm:text-4xl">
-            Road conditions change quickly.
-            <br />
-            Local awareness should too.
-          </h2>
-
-          <p className="mt-4 max-w-xl leading-7 text-[#66706B]">
-            Road Reality helps surface temporary hazards that traditional
-            navigation systems may not show immediately.
-          </p>
-        </div>
-
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {categoryItems.map((category) => (
-            <div
-              key={category.title}
-              className="group card relative overflow-hidden p-5 transition duration-200 hover:-translate-y-1 hover:border-[#D3BCAE] hover:shadow-[0_15px_30px_rgba(44,49,44,0.09)]"
-            >
-              <div className="absolute left-0 top-0 h-1 w-full bg-[#E8DDCA] transition group-hover:bg-[#B85C45]" />
-
-              <span className="text-3xl" role="img" aria-label={category.title}>
-                {category.icon}
-              </span>
-
-              <h3 className="mt-5 font-bold text-[#202624]">
-                {category.title}
-              </h3>
-
-              <p className="mt-2 text-sm leading-6 text-[#66706B]">
-                {category.description}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* How it works */}
-      <section className="warm-grid-texture border-y border-[#E8DDCA] bg-[#F4EFE4]">
-        <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-          <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-            <div className="max-w-2xl">
-              <p className="text-xs font-bold tracking-[0.16em] text-[#B85C45]">
-                SIMPLE BY DESIGN
-              </p>
-
-              <h2 className="font-editorial mt-3 text-3xl font-extrabold leading-tight text-[#202624] sm:text-4xl">
-                See it. Share it.
-                <br />
-                Help make the next journey safer.
+              <span className="text-xs font-bold text-teal-600 uppercase tracking-wider">Live Updates</span>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-0.5">
+                Recent Hazards Near You
               </h2>
+              {placeName && (
+                <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
+                  <MapPin size={13} className="text-teal-600" /> Showing reports around {placeName}
+                </p>
+              )}
             </div>
 
             <Link
-              to="/report"
-              className="inline-flex items-center gap-2 self-start text-sm font-bold text-[#236B6B] transition hover:text-[#174F4F] md:self-auto"
+              to="/explore"
+              className="btn btn-secondary text-xs font-bold self-start sm:self-auto flex items-center gap-1.5"
             >
-              Start a report
-              <ArrowRight size={16} aria-hidden="true" />
+              Open Interactive Map <ArrowRight size={14} />
             </Link>
           </div>
 
-          <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {workflowSteps.map((step) => {
-              const Icon = step.icon;
-
-              return (
-                <article
-                  key={step.number}
-                  className="rounded-2xl border border-[#E1D7C8] bg-[#FCFAF5] p-5"
+          {loadingReports ? (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="card p-5 animate-pulse space-y-3 bg-white">
+                  <div className="h-32 bg-slate-100 rounded-xl" />
+                  <div className="h-4 bg-slate-100 rounded w-2/3" />
+                  <div className="h-3 bg-slate-100 rounded w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : recentReports.length === 0 ? (
+            <div className="card p-10 text-center bg-white border border-slate-200">
+              <ShieldCheck size={36} className="mx-auto text-teal-600 mb-2" />
+              <h3 className="font-bold text-slate-900">No active road hazards reported yet</h3>
+              <p className="text-sm text-slate-500 mt-1">
+                Be the first to report a pothole or road block in your area.
+              </p>
+              <Link to="/report" className="btn btn-accent mt-4 inline-flex text-xs">
+                Report First Hazard
+              </Link>
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {recentReports.map((r) => (
+                <div
+                  key={r.id}
+                  className="card overflow-hidden bg-white hover:border-teal-400 hover:shadow-md transition flex flex-col justify-between"
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold tracking-[0.16em] text-[#B85C45]">
-                      {step.number}
-                    </span>
+                  <div>
+                    {r.imageUrl ? (
+                      <img src={r.imageUrl} alt={r.category} className="h-44 w-full object-cover border-b" />
+                    ) : (
+                      <div className="h-32 w-full bg-slate-100 flex flex-col items-center justify-center text-slate-400 border-b">
+                        <AlertTriangle size={24} className="text-slate-300 mb-1" />
+                        <span className="text-xs font-semibold">No photograph attached</span>
+                      </div>
+                    )}
 
-                    <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#EDE5D8] text-[#476C55]">
-                      <Icon size={19} aria-hidden="true" />
-                    </span>
+                    <div className="p-5 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-base font-extrabold text-slate-900">{r.category}</span>
+                        <Badge value={r.status} />
+                      </div>
+
+                      <p className="text-xs text-slate-600 flex items-start gap-1">
+                        <MapPin size={14} className="text-teal-600 shrink-0 mt-0.5" />
+                        <span className="line-clamp-1">{r.address || 'Address pending'}</span>
+                      </p>
+
+                      {r.description ? (
+                        <p className="text-xs text-slate-500 line-clamp-2 italic">"{r.description}"</p>
+                      ) : (
+                        <p className="text-xs text-slate-400 italic">No description provided</p>
+                      )}
+                    </div>
                   </div>
 
-                  <h3 className="mt-7 text-lg font-extrabold text-[#202624]">
-                    {step.title}
-                  </h3>
+                  <div className="p-5 pt-0 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                    <span className="flex items-center gap-1">
+                      <Clock size={13} />
+                      {r.reportedAt ? new Date(r.reportedAt).toLocaleDateString() : 'Recent'}
+                    </span>
 
-                  <p className="mt-2 text-sm leading-6 text-[#66706B]">
-                    {step.description}
-                  </p>
-                </article>
+                    <Link
+                      to={`/hazards/${r.id}`}
+                      className="font-bold text-teal-700 hover:text-teal-900 hover:underline flex items-center gap-0.5"
+                    >
+                      View Details →
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* 3. HOW ROAD REALITY WORKS (Simple 4-Step Process) */}
+      <section className="py-16 bg-white border-b border-slate-100">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <span className="text-xs font-bold text-teal-600 uppercase tracking-wider">Workflow</span>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight mt-1">
+              How Road Reality Works
+            </h2>
+            <p className="text-sm text-slate-600 mt-2">
+              A transparent civic platform turning road problems into verified solutions.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              {
+                step: '01',
+                title: 'Report',
+                desc: 'Citizens select the issue category. Location and time are captured automatically.',
+                icon: AlertTriangle,
+                color: 'bg-orange-50 text-orange-600 border-orange-200'
+              },
+              {
+                step: '02',
+                title: 'Verify',
+                desc: 'Authority officers and community members review and verify the danger level.',
+                icon: ShieldCheck,
+                color: 'bg-teal-50 text-teal-600 border-teal-200'
+              },
+              {
+                step: '03',
+                title: 'Track',
+                desc: 'Road work crews are dispatched and progress updates appear on the live map.',
+                icon: Compass,
+                color: 'bg-blue-50 text-blue-600 border-blue-200'
+              },
+              {
+                step: '04',
+                title: 'Resolve',
+                desc: 'Repairs are completed and marked resolved so drivers can travel safely.',
+                icon: CheckCircle,
+                color: 'bg-emerald-50 text-emerald-600 border-emerald-200'
+              }
+            ].map((st) => {
+              const Icon = st.icon;
+              return (
+                <div key={st.step} className="card p-6 border border-slate-200 bg-white space-y-3">
+                  <div className={`h-11 w-11 rounded-xl flex items-center justify-center border font-bold text-lg ${st.color}`}>
+                    <Icon size={20} />
+                  </div>
+                  <div>
+                    <span className="text-xs font-mono font-bold text-slate-400">STEP {st.step}</span>
+                    <h3 className="text-lg font-bold text-slate-900 mt-0.5">{st.title}</h3>
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed">{st.desc}</p>
+                </div>
               );
             })}
           </div>
         </div>
       </section>
 
-      {/* Recent reports */}
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div className="max-w-2xl">
-            <p className="text-xs font-bold tracking-[0.16em] text-[#B85C45]">
-              FROM THE COMMUNITY
-            </p>
-
-            <h2 className="font-editorial mt-3 text-3xl font-extrabold text-[#202624] sm:text-4xl">
-              Recent road reports {placeName ? `near ${placeName}` : ''}
+      {/* 4. COMMON ROAD HAZARD CATEGORIES */}
+      <section className="py-16 bg-slate-50 border-b border-slate-200">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto mb-10">
+            <span className="text-xs font-bold text-teal-600 uppercase tracking-wider">Hazard Types</span>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight mt-1">
+              What You Can Report
             </h2>
-
-            <p className="mt-3 leading-7 text-[#66706B]">
-              Clear reports from people who noticed something worth knowing
-              before the next journey.
+            <p className="text-sm text-slate-600 mt-2">
+              Select any category to jump directly to the short report form.
             </p>
           </div>
 
-          <Link
-            to="/explore"
-            className="btn btn-secondary w-fit"
-          >
-            View all on map
-            <MapPin size={17} aria-hidden="true" />
-          </Link>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {categoriesGrid.map((cat) => (
+              <Link
+                key={cat.name}
+                to={`/report?category=${encodeURIComponent(cat.name)}`}
+                className="card p-5 bg-white hover:border-teal-500 hover:shadow-md transition flex items-start gap-4 group"
+              >
+                <span className="text-3xl shrink-0 group-hover:scale-110 transition">{cat.icon}</span>
+                <div className="flex-1">
+                  <h3 className="font-extrabold text-slate-900 group-hover:text-teal-700 transition">
+                    {cat.name}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1">{cat.desc}</p>
+                  <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-teal-600 group-hover:underline">
+                    Report this hazard <ChevronRight size={13} />
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
-
-        {fetchError && (
-          <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 flex items-center gap-2">
-            <AlertTriangle size={18} />
-            {fetchError}
-          </div>
-        )}
-
-        {loadingReports ? (
-          <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-64 animate-pulse rounded-2xl bg-slate-200" />
-            ))}
-          </div>
-        ) : reports.length === 0 ? (
-          <div className="mt-8 card p-8 text-center text-slate-500">
-            <p className="font-bold text-slate-700">No active hazards reported near this location.</p>
-            <p className="text-sm mt-1">Be the first to share a road condition update!</p>
-            <Link to="/report" className="btn btn-primary mt-4 inline-flex">
-              Report a Hazard
-            </Link>
-          </div>
-        ) : (
-          <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {reports.slice(0, 6).map((hazard) => (
-              <HazardCard key={hazard.id} hazard={hazard} />
-            ))}
-          </div>
-        )}
       </section>
 
-      {/* Community impact */}
-      <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
-        <div className="overflow-hidden rounded-[24px] bg-[#476C55] text-white">
-          <div className="grid gap-8 px-6 py-10 sm:px-10 lg:grid-cols-[1fr_0.9fr] lg:items-center lg:px-12 lg:py-14">
-            <div>
-              <p className="text-xs font-bold tracking-[0.16em] text-[#D6E8D8]">
-                EVERY REPORT COUNTS
-              </p>
+      {/* 5. CALL TO ACTION FOOTER BANNER */}
+      <section className="py-16 bg-white">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+          <div className="card p-8 sm:p-12 bg-gradient-to-br from-teal-500 to-teal-700 text-white shadow-xl text-center border-none">
+            <h2 className="text-2xl sm:text-4xl font-black tracking-tight">
+              Notice a dangerous road condition?
+            </h2>
+            <p className="mt-3 text-teal-100 text-sm sm:text-base max-w-xl mx-auto">
+              It takes 10 seconds to submit a report. Help prevent vehicle damage and accidents for your entire city.
+            </p>
 
-              <h2 className="font-editorial mt-4 max-w-2xl text-3xl font-extrabold leading-tight sm:text-4xl">
-                Safer roads start with people looking out for one another.
-              </h2>
-
-              <p className="mt-4 max-w-xl leading-7 text-[#E2EEE3]">
-                A pothole, flooded road, fallen branch, or obstruction may
-                only take a minute to report—but that information can help the
-                next commuter make a safer decision.
-              </p>
-
+            <div className="mt-8 flex flex-col sm:flex-row justify-center gap-3">
               <Link
                 to="/report"
-                className="btn mt-7 bg-[#FCFAF5] text-[#202624] hover:bg-white"
+                className="btn btn-accent text-sm font-bold py-3 px-8 shadow-md"
               >
-                <Upload size={17} aria-hidden="true" />
-                Make a road report
+                Report an Issue Now
               </Link>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-white/15 bg-white/10 p-5 backdrop-blur-sm">
-                <p className="text-3xl font-extrabold">{reports.length}</p>
-                <p className="mt-1 text-sm text-[#D6E8D8]">
-                  Reports shared
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-white/15 bg-white/10 p-5 backdrop-blur-sm">
-                <p className="text-3xl font-extrabold">
-                  {reports.filter(r => r.status !== 'resolved').length}
-                </p>
-                <p className="mt-1 text-sm text-[#D6E8D8]">
-                  Active hazards
-                </p>
-              </div>
-
-              <div className="col-span-2 rounded-2xl border border-white/15 bg-[#202624]/20 p-5">
-                <p className="flex items-center gap-2 text-sm font-bold">
-                  <ShieldCheck size={18} className="text-[#B7D5BD]" />
-                  A clearer picture of the road ahead
-                </p>
-
-                <p className="mt-2 text-sm leading-6 text-[#D6E8D8]">
-                  Reports move from community observation to verification,
-                  tracking, and eventual resolution.
-                </p>
-              </div>
+              <Link
+                to="/explore"
+                className="btn bg-white/10 hover:bg-white/20 border border-white/30 text-white text-sm font-bold py-3 px-6"
+              >
+                View Live Map
+              </Link>
             </div>
           </div>
         </div>

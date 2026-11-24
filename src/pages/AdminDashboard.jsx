@@ -175,9 +175,18 @@ export default function AdminDashboard() {
           <h1 className="mt-5 text-2xl font-black text-slate-900">Access Restricted</h1>
 
           {currentUser ? (
-            <p className="mt-3 text-sm text-slate-600 leading-relaxed">
-              You are authenticated as <span className="font-bold text-slate-800">{currentUser.email}</span>, but your profile role is <code className="bg-slate-200 px-1.5 py-0.5 rounded text-slate-900">user</code>. Administrator authorization is required to access the Admin Portal.
-            </p>
+            <>
+              <p className="mt-3 text-sm text-slate-600 leading-relaxed">
+                You are authenticated as <span className="font-bold text-slate-800">{currentUser.email}</span>, but your profile role is currently <code className="bg-slate-200 px-1.5 py-0.5 rounded text-slate-900 font-bold">user</code>. Administrator authorization is required to access the Admin Portal.
+              </p>
+              <div className="mt-4 p-3 rounded-xl bg-slate-50 border border-slate-200 text-left text-xs text-slate-600">
+                <p className="font-bold text-slate-800 mb-1">How to enable this account as Admin:</p>
+                <p className="text-[11px] text-slate-500">Run this SQL in your Supabase SQL Editor:</p>
+                <code className="block bg-slate-900 text-teal-300 p-2 rounded-lg font-mono text-[11px] mt-1.5 break-all select-all">
+                  UPDATE public.profiles SET role = 'admin' WHERE email = '{currentUser.email}';
+                </code>
+              </div>
+            </>
           ) : (
             <p className="mt-3 text-sm text-slate-600 leading-relaxed">
               Please sign in with an authorized Google administrator account.
@@ -679,17 +688,50 @@ export default function AdminDashboard() {
                       </td>
 
                       <td className="p-4">
-                        <select
-                          disabled={actionLoadingId === r.id}
-                          value={r.rawStatus || 'REPORTED'}
-                          onChange={(e) => handleStatusChange(r.id, e.target.value)}
-                          className="input text-xs font-bold py-1.5 px-2 border-slate-300 rounded-lg cursor-pointer bg-white"
-                        >
-                          <option value="REPORTED">REPORTED</option>
-                          <option value="VERIFIED">VERIFIED</option>
-                          <option value="IN_PROGRESS">IN_PROGRESS</option>
-                          <option value="RESOLVED">RESOLVED</option>
-                        </select>
+                        <div className="flex flex-col gap-1.5 min-w-[140px]">
+                          <select
+                            disabled={actionLoadingId === r.id}
+                            value={r.rawStatus || 'REPORTED'}
+                            onChange={(e) => handleStatusChange(r.id, e.target.value)}
+                            className="input text-xs font-bold py-1 px-2 border-slate-300 rounded-lg cursor-pointer bg-white"
+                          >
+                            <option value="REPORTED">REPORTED</option>
+                            <option value="VERIFIED">VERIFIED</option>
+                            <option value="IN_PROGRESS">IN_PROGRESS</option>
+                            <option value="RESOLVED">RESOLVED</option>
+                          </select>
+
+                          {/* Quick 1-Click Action Buttons */}
+                          <div className="flex items-center gap-1">
+                            {(r.rawStatus === 'REPORTED' || !r.rawStatus) && (
+                              <button
+                                onClick={() => handleStatusChange(r.id, 'VERIFIED')}
+                                disabled={actionLoadingId === r.id}
+                                className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800 hover:bg-teal-200 transition"
+                              >
+                                ✓ Verify
+                              </button>
+                            )}
+                            {r.rawStatus === 'VERIFIED' && (
+                              <button
+                                onClick={() => handleStatusChange(r.id, 'IN_PROGRESS')}
+                                disabled={actionLoadingId === r.id}
+                                className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 hover:bg-purple-200 transition"
+                              >
+                                ⚙ In Progress
+                              </button>
+                            )}
+                            {r.rawStatus === 'IN_PROGRESS' && (
+                              <button
+                                onClick={() => handleStatusChange(r.id, 'RESOLVED')}
+                                disabled={actionLoadingId === r.id}
+                                className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 hover:bg-emerald-200 transition"
+                              >
+                                ✓ Resolve
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       </td>
 
                       <td className="p-4 text-right whitespace-nowrap">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { categories } from '../services/mockData';
 import { createHazard } from '../services/hazardService';
 import { uploadHazardPhoto } from '../services/storageService';
@@ -26,6 +26,7 @@ import {
 
 export default function ReportHazard() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, session } = useAuth();
 
   // Location hook: automatically attempts to detect location when permission is granted
@@ -44,7 +45,7 @@ export default function ReportHazard() {
 
   // Form State: Only category is strictly required!
   const [data, setData] = useState({
-    category: '',
+    category: searchParams.get('category') || '',
     imageUrl: '',
     latitude: null,
     longitude: null,

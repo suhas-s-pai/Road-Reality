@@ -1,90 +1,88 @@
-import { Link } from "react-router-dom";
-import { ArrowUpRight, MapPinned, ShieldAlert } from "lucide-react";
+import { Link } from 'react-router-dom';
+import { ShieldAlert, ArrowUpRight, Heart, MapPin, Shield } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const footerLinks = [
-  { label: "Explore map", to: "/explore" },
-  { label: "Report a hazard", to: "/report" },
-  { label: "My reports", to: "/my-reports" },
-  { label: "Notifications", to: "/notifications" },
+  { label: 'Home', to: '/' },
+  { label: 'Explore Map', to: '/explore' },
+  { label: 'Report an Issue', to: '/report' },
+  { label: 'My Reports', to: '/my-reports' },
+  { label: 'Notifications', to: '/notifications' }
 ];
 
 export default function Footer() {
+  const { isAdmin } = useAuth();
+
   return (
-    <footer className="bg-[#202624] text-[#FCFAF5]">
-      <div className="map-grid-texture">
-        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-          <div className="grid gap-10 md:grid-cols-[1.3fr_0.7fr_0.8fr]">
-            <div>
-              <Link
-                to="/"
-                className="inline-flex items-center gap-2 text-lg font-extrabold tracking-tight"
-                aria-label="Road Reality home"
-              >
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#B85C45] text-white">
-                  <ShieldAlert size={21} aria-hidden="true" />
-                </span>
+    <footer className="bg-slate-50 border-t border-slate-200 text-slate-600 py-12">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="grid gap-10 md:grid-cols-4">
+          {/* Brand Info */}
+          <div className="md:col-span-2 space-y-4">
+            <Link to="/" className="inline-flex items-center gap-2.5 font-black text-slate-900 text-lg tracking-tight">
+              <span className="grid h-8 w-8 place-items-center rounded-xl bg-teal-600 text-white shadow-sm">
+                <ShieldAlert size={18} />
+              </span>
+              <span>Road Reality</span>
+            </Link>
 
-                <span>Road Reality</span>
-              </Link>
+            <p className="text-sm text-slate-600 max-w-md leading-relaxed">
+              A real-time, community-driven road hazard reporting platform. Helping citizens navigate safely and empowering local road authorities to verify and repair hazards faster.
+            </p>
 
-              <p className="font-editorial mt-5 max-w-sm text-2xl font-bold leading-tight text-white">
-                Know the road before you take it.
-              </p>
-
-              <p className="mt-4 max-w-sm text-sm leading-6 text-[#C7CEC8]">
-                A crowdsourced road-hazard network helping people make safer,
-                better-informed journeys.
-              </p>
+            <div className="flex items-center gap-2 text-xs font-semibold text-teal-700 bg-teal-50 border border-teal-200 w-fit px-3 py-1.5 rounded-full">
+              <span className="h-2 w-2 rounded-full bg-teal-600 animate-pulse" />
+              Report · Verify · Track · Resolve
             </div>
+          </div>
 
-            <div>
-              <p className="text-xs font-bold tracking-[0.16em] text-[#DDB4A6]">
-                EXPLORE
-              </p>
-
-              <nav className="mt-4 flex flex-col items-start gap-3">
-                {footerLinks.map((link) => (
+          {/* Quick Links */}
+          <div>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-3">Navigation</h4>
+            <ul className="space-y-2 text-sm">
+              {footerLinks.map((link) => (
+                <li key={link.to}>
                   <Link
-                    key={link.to}
                     to={link.to}
-                    className="group inline-flex items-center gap-2 text-sm text-[#E7E7E1] transition hover:text-white"
+                    className="text-slate-600 hover:text-teal-600 transition inline-flex items-center gap-1"
                   >
                     {link.label}
-                    <ArrowUpRight
-                      size={14}
-                      className="transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
-                      aria-hidden="true"
-                    />
                   </Link>
-                ))}
-              </nav>
-            </div>
+                </li>
+              ))}
+              {isAdmin && (
+                <li>
+                  <Link
+                    to="/admin"
+                    className="text-amber-800 font-bold hover:underline inline-flex items-center gap-1"
+                  >
+                    <Shield size={13} /> Admin Dashboard
+                  </Link>
+                </li>
+              )}
+            </ul>
+          </div>
 
-            <div>
-              <p className="text-xs font-bold tracking-[0.16em] text-[#DDB4A6]">
-                BUILT FOR SAFER STREETS
+          {/* Civic Impact Box */}
+          <div>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-3">Community Safety</h4>
+            <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm text-xs space-y-2">
+              <p className="font-bold text-slate-800 flex items-center gap-1.5">
+                <MapPin size={14} className="text-orange-500" />
+                Crowdsourced Live Map
               </p>
-
-              <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
-                <MapPinned size={20} className="text-[#E5B45D]" aria-hidden="true" />
-
-                <p className="mt-3 text-sm font-semibold text-white">
-                  Report. Verify. Track. Resolve.
-                </p>
-
-                <p className="mt-1 text-sm leading-6 text-[#C7CEC8]">
-                  Every report can help someone choose a safer route.
-                </p>
-              </div>
+              <p className="text-slate-500 leading-relaxed">
+                Every verified pothole, waterlogged street, or fallen tree report helps protect motorists and pedestrians.
+              </p>
             </div>
           </div>
+        </div>
 
-          <div className="road-line mt-10 border-white/20" />
-
-          <div className="mt-5 flex flex-col gap-2 text-xs text-[#AEB8B0] sm:flex-row sm:items-center sm:justify-between">
-            <p>Road Reality · College Full Stack Development Project</p>
-            <p>Frontend experience designed for safer local travel.</p>
-          </div>
+        <div className="mt-10 border-t border-slate-200/80 pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-3">
+          <p>© {new Date().getFullYear()} Road Reality. All community road reports are publicly accessible.</p>
+          <p className="flex items-center gap-1 text-slate-500">
+            Civic Technology for Road Safety
+          </p>
         </div>
       </div>
     </footer>
