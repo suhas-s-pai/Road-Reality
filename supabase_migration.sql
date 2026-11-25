@@ -129,6 +129,7 @@ ALTER TABLE public.hazard_reports ADD COLUMN IF NOT EXISTS longitude DOUBLE PREC
 ALTER TABLE public.hazard_reports ADD COLUMN IF NOT EXISTS address TEXT;
 ALTER TABLE public.hazard_reports ADD COLUMN IF NOT EXISTS photo_url TEXT;
 ALTER TABLE public.hazard_reports ADD COLUMN IF NOT EXISTS assigned_to TEXT;
+ALTER TABLE public.hazard_reports ADD COLUMN IF NOT EXISTS admin_notes TEXT;
 ALTER TABLE public.hazard_reports ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now());
 ALTER TABLE public.hazard_reports ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now());
 
@@ -148,10 +149,11 @@ CREATE POLICY "Anyone can view hazard reports"
   USING (true);
 
 DROP POLICY IF EXISTS "Authenticated users can create hazard reports" ON public.hazard_reports;
-CREATE POLICY "Authenticated users can create hazard reports"
+DROP POLICY IF EXISTS "Anyone can create hazard reports" ON public.hazard_reports;
+CREATE POLICY "Anyone can create hazard reports"
   ON public.hazard_reports FOR INSERT
-  TO authenticated
-  WITH CHECK (auth.role() = 'authenticated');
+  TO anon, authenticated
+  WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Users can update their own hazard reports or admin" ON public.hazard_reports;
 CREATE POLICY "Users can update their own hazard reports or admin"

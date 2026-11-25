@@ -7,16 +7,20 @@
 :root {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color: #0f172a;
-  background-color: #ffffff;
+  background-color: #f8fafc;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-body {
+html, body {
   margin: 0;
-  background-color: #ffffff;
+  padding: 0;
+  background-color: #f8fafc;
   color: #0f172a;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 /* Keyboard focus accessible outline */
@@ -29,7 +33,7 @@ textarea:focus-visible {
   outline-offset: 2px;
 }
 
-/* Base page container */
+/* Page container */
 .page {
   min-height: calc(100vh - 64px);
   background-color: #f8fafc;
@@ -38,20 +42,27 @@ textarea:focus-visible {
 /* Modern Card style */
 .card {
   border: 1px solid #e2e8f0;
-  border-radius: 16px;
+  border-radius: 1rem;
   background-color: #ffffff;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  transition: box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.card-hover:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
 }
 
 /* Form input */
 .input {
   width: 100%;
   border: 1px solid #cbd5e1;
-  border-radius: 10px;
+  border-radius: 0.75rem;
   background-color: #ffffff;
   padding: 0.65rem 0.85rem;
   color: #0f172a;
   font-size: 0.875rem;
+  line-height: 1.25rem;
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
@@ -61,7 +72,7 @@ textarea:focus-visible {
   box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
 }
 
-/* Buttons with Teal & Orange theme */
+/* Base button */
 .btn {
   display: inline-flex;
   min-height: 42px;
@@ -69,112 +80,138 @@ textarea:focus-visible {
   justify-content: center;
   gap: 0.5rem;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: 0.75rem;
   padding: 0.6rem 1.15rem;
   font-weight: 600;
   font-size: 0.875rem;
   line-height: 1.25;
-  transition: all 150ms ease;
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   text-decoration: none;
-}
-
-.btn:hover {
-  transform: translateY(-1px);
+  white-space: nowrap;
+  user-select: none;
 }
 
 .btn:active {
-  transform: translateY(1px) scale(0.985);
+  transform: translateY(1px) scale(0.99);
 }
 
-/* Primary = Teal */
+/* Primary = Deep Teal */
 .btn-primary {
   background-color: #0d9488;
   color: #ffffff;
-  box-shadow: 0 2px 4px 0 rgba(13, 148, 136, 0.2);
+  box-shadow: 0 1px 2px 0 rgba(13, 148, 136, 0.2);
 }
 
 .btn-primary:hover {
   background-color: #0f766e;
-  box-shadow: 0 4px 6px -1px rgba(13, 148, 136, 0.3);
+  box-shadow: 0 4px 6px -1px rgba(13, 148, 136, 0.25);
 }
 
-/* Accent = Orange */
+/* Accent = Vibrant Orange */
 .btn-accent {
   background-color: #f97316;
   color: #ffffff;
-  box-shadow: 0 2px 4px 0 rgba(249, 115, 22, 0.2);
+  box-shadow: 0 1px 2px 0 rgba(249, 115, 22, 0.2);
 }
 
 .btn-accent:hover {
   background-color: #ea580c;
-  box-shadow: 0 4px 6px -1px rgba(249, 115, 22, 0.3);
+  box-shadow: 0 4px 6px -1px rgba(249, 115, 22, 0.25);
 }
 
-/* Secondary = Crisp Light Outline */
+/* Secondary = Clean White / Soft Gray */
 .btn-secondary {
-  border-color: #cbd5e1;
   background-color: #ffffff;
-  color: #1e293b;
+  border-color: #e2e8f0;
+  color: #334155;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
 }
 
 .btn-secondary:hover {
   background-color: #f8fafc;
-  border-color: #94a3b8;
+  border-color: #cbd5e1;
+  color: #0f172a;
 }
 
-/* Leaflet map container */
-.leaflet-container {
-  width: 100%;
-  height: 100%;
-  font-family: inherit;
-  border-radius: 12px;
+/* Dark Teal Admin button */
+.btn-admin {
+  background-color: #0b3b3c;
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 1px 2px 0 rgba(11, 59, 60, 0.2);
 }
 
-/* Custom Marker Styling */
-.hazard-pin {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.btn-admin:hover {
+  background-color: #072627;
+  box-shadow: 0 4px 6px -1px rgba(11, 59, 60, 0.3);
+}
+
+/* Map marker styles */
+.marker-dot {
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  border: 2px solid #ffffff;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
-  font-size: 16px;
-  cursor: pointer;
-  transition: transform 150ms ease;
-}
-
-.hazard-pin:hover {
-  transform: scale(1.15);
-}
-
-.hazard-pin.critical {
-  background-color: #ef4444;
-  color: #ffffff;
-}
-
-.hazard-pin.high {
+  border: 3px solid #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   background-color: #f97316;
-  color: #ffffff;
 }
 
-.hazard-pin.moderate {
-  background-color: #f59e0b;
-  color: #ffffff;
+.marker-dot.critical {
+  background-color: #ef4444;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
 }
 
-.hazard-pin.safe,
-.hazard-pin.resolved {
+.marker-dot.high {
+  background-color: #f97316;
+}
+
+.marker-dot.verified {
+  background-color: #0284c7;
+}
+
+.marker-dot.in-progress {
+  background-color: #9333ea;
+}
+
+.marker-dot.safe {
   background-color: #10b981;
-  color: #ffffff;
 }
 
-.hazard-pin.verified {
-  background-color: #0d9488;
-  color: #ffffff;
+/* Leaflet container polish */
+.leaflet-container {
+  font-family: inherit !important;
+  z-index: 10;
 }
 
-.hazard-pin.in-progress {
-  background-color: #8b5cf6;
-  color: #ffffff;
+.leaflet-popup-content-wrapper {
+  border-radius: 1rem !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid #e2e8f0;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  line-height: 1.4 !important;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }

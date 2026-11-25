@@ -18,9 +18,9 @@ const AuthContext = createContext({
  * - email = user's email
  * - name = user's Google display name
  * - avatar_url = user's Google avatar
- * New profiles receive the database default role. Existing profile roles are preserved.
+ * Existing profile roles (e.g. 'admin') are strictly preserved and never downgraded.
  */
-async function syncUserProfile(user) {
+async function syncUserProfile(user, token) {
   if (!user || !isSupabaseConfigured || !supabase) return;
 
   const fullName =
@@ -32,7 +32,7 @@ async function syncUserProfile(user) {
   const avatarUrl = user.user_metadata?.avatar_url || '';
 
   try {
-    // Check if profile exists first to strictly preserve existing role (e.g. 'admin')
+    // 1. Direct Supabase sync if configured
     const { data: existingProfile } = await supabase
       .from('profiles')
       .select('id, role')
@@ -53,6 +53,7 @@ async function syncUserProfile(user) {
       if (insertErr) console.warn('[Auth] Supabase profile insert notice:', insertErr.message);
       else console.log('[Auth] New profile created for:', user.email);
     } else {
+      // Profile exists: NEVER update the 'role' column during client profile sync
       const { error: updateErr } = await supabase
         .from('profiles')
         .update({
@@ -66,6 +67,18 @@ async function syncUserProfile(user) {
       if (updateErr) console.warn('[Auth] Supabase profile update notice:', updateErr.message);
       else console.log('[Auth] Profile synced (role preserved:', existingProfile.role, ') for:', user.email);
     }
+
+    // 2. Also notify backend sync-profile if token is available
+    if (token) {
+      const base = import.meta.env.VITE_API_BASE_URL || '/api';
+      fetch(`${base}/auth/sync-profile`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        }
+      }).catch((e) => console.warn('[Auth] Backend sync-profile ping notice:', e.message));
+    }
   } catch (err) {
     console.warn('[Auth] Profile sync warning:', err.message);
   }
@@ -78,14 +91,19 @@ export function AuthProvider({ children }) {
   const [role, setRole] = useState(null);
   const [error, setError] = useState(null);
 
-  // Resolve role from the authenticated user's actual Supabase profile.
+  // Resolve role reliably after Google login:
+  // 1. Check direct Supabase profiles table
+  // 2. If needed, query trusted backend profile endpoint (/api/auth/profile)
+  // 3. Never silently downgrade an existing confirmed admin role
   const resolveUserRole = async (currentSession) => {
     if (!currentSession || !currentSession.access_token || !currentSession.user) {
       setRole(null);
       return 'user';
     }
 
-    // Admin UI access uses the actual profile role, without backend or email fallbacks.
+    let resolvedRole = null;
+
+    // Step 1: Query direct Supabase profiles table
     if (supabase && currentSession.user) {
       try {
         const { data: profile, error: profileErr } = await supabase
@@ -95,33 +113,53 @@ export function AuthProvider({ children }) {
           .maybeSingle();
 
         if (profileErr) {
-          console.warn('[Auth] Profile lookup failed:', {
-            userId: currentSession.user.id,
-            code: profileErr.code,
-            message: profileErr.message
-          });
+          console.warn('[Auth] Direct Supabase profile lookup notice:', profileErr.message);
         } else if (profile && profile.role) {
-          const profileRole = profile.role;
-          console.info('[Auth] Profile role lookup:', {
-            userId: currentSession.user.id,
-            profileId: profile.id,
-            profileRole
-          });
-          setRole(profileRole);
-          return profileRole;
-        } else {
-          console.warn('[Auth] No profile matched authenticated user:', {
-            userId: currentSession.user.id
-          });
+          resolvedRole = String(profile.role).trim().toLowerCase();
+          console.info('[Auth] Direct Supabase profile role resolved:', resolvedRole);
         }
       } catch (err) {
-        console.warn('[Auth] Direct profiles query fallback:', err.message);
+        console.warn('[Auth] Direct Supabase profile query exception:', err.message);
       }
     }
 
-    console.log('[Auth] Default role assigned: user');
-    setRole('user');
-    return 'user';
+    // Step 2: If role is not admin, query trusted backend profile endpoint
+    // to apply backend's authoritative check (including ADMIN_EMAIL fallback)
+    if (resolvedRole !== 'admin' && currentSession.access_token) {
+      try {
+        const base = import.meta.env.VITE_API_BASE_URL || '/api';
+        console.info('[Auth] Fetching profile from trusted backend endpoint...');
+        const res = await fetch(`${base}/auth/profile`, {
+          headers: {
+            Authorization: `Bearer ${currentSession.access_token}`
+          }
+        });
+
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && json.user && json.user.role) {
+            const backendRole = String(json.user.role).trim().toLowerCase();
+            console.info('[Auth] Backend trusted profile role resolved:', backendRole);
+            resolvedRole = backendRole;
+          }
+        } else {
+          console.warn('[Auth] Backend profile endpoint returned HTTP', res.status);
+        }
+      } catch (err) {
+        console.warn('[Auth] Backend profile fetch notice:', err.message);
+      }
+    }
+
+    // Step 3: Prevent silent downgrade of an already confirmed admin role
+    if (role === 'admin' && resolvedRole !== 'admin' && user?.id === currentSession.user.id) {
+      console.warn('[Auth] Retaining existing confirmed admin role for user:', user.email);
+      resolvedRole = 'admin';
+    }
+
+    const finalRole = resolvedRole || 'user';
+    console.info('[Auth] Final resolved role:', finalRole);
+    setRole(finalRole);
+    return finalRole;
   };
 
   useEffect(() => {
@@ -167,7 +205,7 @@ export function AuthProvider({ children }) {
         // 6 & 7: syncUserProfile started / completed or failed
         console.log('[Auth 6] syncUserProfile started for:', currentSession.user.email);
         try {
-          await syncUserProfile(currentSession.user);
+          await syncUserProfile(currentSession.user, currentSession.access_token);
           console.log('[Auth 7] syncUserProfile completed');
         } catch (err) {
           console.warn('[Auth 7] syncUserProfile failed:', err.message);

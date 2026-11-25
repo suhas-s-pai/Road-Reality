@@ -1,8 +1,11 @@
+const path = require("path");
+// Load backend/.env first, then fallback to root .env
+require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
+require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
 require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
-const path = require("path");
 const fs = require("fs");
 
 const reportsRouter = require("./routes/reports");

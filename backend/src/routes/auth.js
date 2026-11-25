@@ -47,6 +47,16 @@ router.get("/profile", requireAuth, async (req, res) => {
 
     const effectiveRole = isAdminEmail ? "admin" : (profile.role || "user");
 
+    // If user matches ADMIN_EMAIL but profile role in DB is not admin, update DB so it stays synchronized
+    if (isAdminEmail && profile.role !== "admin") {
+      supabase
+        .from("profiles")
+        .update({ role: "admin", updated_at: new Date().toISOString() })
+        .eq("id", req.user.id)
+        .then(() => console.log(`[Auth API] Synced role='admin' in DB for ${req.user.email}`))
+        .catch(err => console.warn(`[Auth API] Failed to sync admin role in DB:`, err.message));
+    }
+
     res.json({
       success: true,
       user: {

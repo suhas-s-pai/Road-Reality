@@ -40,7 +40,8 @@ import {
   getAdminUsers,
   updateAdminReport,
   updateUserRole,
-  deleteHazard
+  deleteHazard,
+  getHazards
 } from '../services/hazardService';
 import { Badge } from '../components/Badges';
 
@@ -79,12 +80,14 @@ export default function AdminDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [dateFilter, setDateFilter] = useState('ALL');
   const [assignmentFilter, setAssignmentFilter] = useState('ALL');
 
   // Modal State for "View Details"
   const [selectedReport, setSelectedReport] = useState(null);
   const [modalStatus, setModalStatus] = useState('');
   const [modalAssignment, setModalAssignment] = useState('');
+  const [modalNotes, setModalNotes] = useState('');
 
   // Notifications & loading indicators
   const [actionLoadingId, setActionLoadingId] = useState(null);
@@ -94,19 +97,38 @@ export default function AdminDashboard() {
 
   // Load all live admin data from backend/Supabase
   const loadPortalData = async () => {
-    if (!session?.access_token) return;
+    if (!session?.access_token) {
+      setErrorMessage("No active session token found. Please ensure you are logged in.");
+      return;
+    }
     setLoading(true);
     setErrorMessage(null);
     try {
-      const [statsData, usersData, reportsData] = await Promise.all([
+      const [statsRes, usersRes, reportsRes] = await Promise.allSettled([
         getAdminStats(session.access_token),
         getAdminUsers(session.access_token),
-        getAdminReports(session.access_token)
+        getAdminReports(session.access_token).catch(() => getHazards().then((r) => r.data))
       ]);
 
-      if (statsData) setStats(statsData);
-      setUsersList(usersData || []);
-      setReportsList(reportsData || []);
+      if (statsRes.status === 'fulfilled' && statsRes.value) {
+        setStats(statsRes.value);
+      }
+      if (usersRes.status === 'fulfilled' && usersRes.value) {
+        setUsersList(usersRes.value);
+      }
+      if (reportsRes.status === 'fulfilled' && reportsRes.value) {
+        setReportsList(reportsRes.value);
+      }
+
+      // Collect any failures
+      const failures = [statsRes, usersRes, reportsRes].filter((r) => r.status === 'rejected');
+      if (failures.length > 0) {
+        const msg = failures.map((f) => f.reason?.message || 'API request failed').join('. ');
+        console.warn('Some admin portal data could not be fetched:', msg);
+        if (reportsRes.status === 'rejected') {
+          setErrorMessage(msg || 'Failed to load admin reports. Ensure backend is running.');
+        }
+      }
     } catch (err) {
       console.error('Admin portal data fetch error:', err);
       setErrorMessage(err.message || 'Failed to load admin portal data.');
@@ -126,6 +148,7 @@ export default function AdminDashboard() {
     setSelectedReport(report);
     setModalStatus(report.rawStatus || report.status?.toUpperCase() || 'REPORTED');
     setModalAssignment(report.assigned_to || '');
+    setModalNotes(report.admin_notes || report.notes || '');
   };
 
   // Close Report Details Modal
@@ -133,6 +156,7 @@ export default function AdminDashboard() {
     setSelectedReport(null);
     setModalStatus('');
     setModalAssignment('');
+    setModalNotes('');
   };
 
   // Save changes from inside details modal
@@ -144,11 +168,14 @@ export default function AdminDashboard() {
     try {
       const res = await updateAdminReport(
         selectedReport.id,
-        { status: modalStatus, assigned_to: modalAssignment },
+        { status: modalStatus, assigned_to: modalAssignment, admin_notes: modalNotes },
         session?.access_token
       );
 
-      const updatedReport = res.data;
+      const updatedReport = {
+        ...res.data,
+        admin_notes: modalNotes
+      };
       setReportsList((prev) =>
         prev.map((r) => (r.id === selectedReport.id ? { ...r, ...updatedReport } : r))
       );
@@ -338,6 +365,25 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
     // Category filter
     if (categoryFilter !== 'ALL' && r.category !== categoryFilter) {
       return false;
+    }
+
+    // Date filter
+    if (dateFilter !== 'ALL') {
+      const dateVal = r.reportedAt || r.created_at;
+      if (dateVal) {
+        const reportDate = new Date(dateVal);
+        const now = new Date();
+        if (dateFilter === 'TODAY') {
+          const isToday = reportDate.toDateString() === now.toDateString();
+          if (!isToday) return false;
+        } else if (dateFilter === 'WEEK') {
+          const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          if (reportDate < oneWeekAgo) return false;
+        } else if (dateFilter === 'MONTH') {
+          const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          if (reportDate < oneMonthAgo) return false;
+        }
+      }
     }
 
     // Assignment filter
@@ -803,6 +849,18 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
                       <option value="Blocked Road">Blocked Road</option>
                       <option value="Accident">Accident</option>
                       <option value="Other">Other</option>
+                    </select>
+
+                    <select
+                      value={dateFilter}
+                      onChange={(e) => setDateFilter(e.target.value)}
+                      className="input text-xs font-semibold py-2 px-3 border-slate-300 rounded-xl cursor-pointer bg-white"
+                      title="Filter reports by submission date"
+                    >
+                      <option value="ALL">All Time</option>
+                      <option value="TODAY">Today</option>
+                      <option value="WEEK">This Week</option>
+                      <option value="MONTH">This Month</option>
                     </select>
                   </div>
                 </div>
@@ -1478,6 +1536,23 @@ WHERE id = (SELECT id FROM auth.users WHERE email = 'suhaspai13@gmail.com' LIMIT
               <p className="mt-1 text-slate-700 leading-relaxed italic">
                 {selectedReport.description ? `"${selectedReport.description}"` : 'No additional description provided.'}
               </p>
+            </div>
+
+            {/* Administrative Notes & Action Log */}
+            <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 text-xs space-y-1.5">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700">
+                Administrative Notes & Action Log
+              </label>
+              <p className="text-[11px] text-slate-500">
+                Internal authority notes regarding inspections, repair crew dispatches, or road status.
+              </p>
+              <textarea
+                rows={3}
+                value={modalNotes}
+                onChange={(e) => setModalNotes(e.target.value)}
+                placeholder="Enter internal notes, work order number, or repair updates..."
+                className="w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs text-slate-800 placeholder-slate-400 focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+              />
             </div>
 
             {/* Modal Actions */}

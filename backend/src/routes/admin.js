@@ -191,7 +191,7 @@ router.get("/reports", requireAdmin, async (req, res) => {
 router.put("/reports/:id", requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, assigned_to } = req.body;
+    const { status, assigned_to, admin_notes, notes } = req.body;
 
     if (!checkSupabaseConfigured(res)) return;
 
@@ -210,13 +210,28 @@ router.put("/reports/:id", requireAdmin, async (req, res) => {
 
     if (assigned_to !== undefined) updatePayload.assigned_to = assigned_to;
 
+    const notesToSave = admin_notes !== undefined ? admin_notes : notes;
+    if (notesToSave !== undefined) updatePayload.admin_notes = notesToSave;
+
     const tableName = await getReportsTable();
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from(tableName)
       .update(updatePayload)
       .eq("id", id)
       .select()
       .single();
+
+    if (error && error.message && error.message.toLowerCase().includes("admin_notes")) {
+      delete updatePayload.admin_notes;
+      const retry = await supabase
+        .from(tableName)
+        .update(updatePayload)
+        .eq("id", id)
+        .select()
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error || !data) {
       return res.status(404).json({ success: false, message: "Failed to update report" });

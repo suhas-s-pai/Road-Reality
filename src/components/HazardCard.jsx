@@ -1,56 +1,105 @@
 import { Link } from 'react-router-dom';
-import { MapPin, Car } from 'lucide-react';
+import { MapPin, Car, AlertTriangle, ArrowRight } from 'lucide-react';
 import { Badge } from './Badges';
 import { ago } from '../utils/formatters';
 
-export default function HazardCard({ hazard }) {
+const categoryIcons = {
+  Pothole: '🕳️',
+  Waterlogging: '🌊',
+  'Fallen Tree': '🌳',
+  'Road Debris': '🚧',
+  'Broken Streetlight': '💡',
+  'Blocked Road': '⛔',
+  Accident: '🚨',
+  Other: '⚠️'
+};
+
+export default function HazardCard({ hazard, className = '' }) {
   if (!hazard) return null;
+
+  const catIcon = categoryIcons[hazard.category] || '⚠️';
 
   return (
     <Link
       to={`/hazards/${hazard.id}`}
-      className="card block overflow-hidden transition hover:-translate-y-0.5 hover:shadow-md bg-white border border-slate-200"
+      className={`card group block overflow-hidden rounded-2xl border border-slate-200/90 bg-white transition-all duration-200 hover:-translate-y-1 hover:border-teal-300 hover:shadow-md ${className}`}
     >
-      {hazard.imageUrl ? (
-        <img
-          src={hazard.imageUrl}
-          alt={`${hazard.category} report`}
-          className="h-36 w-full object-cover"
-          onError={(e) => {
-            e.currentTarget.style.display = 'none';
-          }}
-        />
-      ) : (
-        <div className="h-36 w-full bg-slate-100 flex flex-col items-center justify-center text-slate-400 gap-1 border-b">
-          <span className="text-2xl">⚠️</span>
-          <span className="text-xs font-semibold">No photograph</span>
-        </div>
-      )}
+      {/* Photo / Visual Banner */}
+      <div className="relative h-44 w-full overflow-hidden bg-slate-100">
+        {hazard.imageUrl ? (
+          <img
+            src={hazard.imageUrl}
+            alt={`${hazard.category} hazard`}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="lazy"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.nextElementSibling.style.display = 'flex';
+            }}
+          />
+        ) : null}
 
-      <div className="p-4">
-        <div className="flex justify-between items-start gap-2">
-          <h3 className="font-bold text-slate-900 truncate">{hazard.category}</h3>
+        <div
+          className={`h-full w-full flex-col items-center justify-center gap-1.5 bg-gradient-to-b from-slate-50 to-slate-100 text-slate-400 ${
+            hazard.imageUrl ? 'hidden' : 'flex'
+          }`}
+        >
+          <span className="text-3xl">{catIcon}</span>
+          <span className="text-xs font-semibold text-slate-500">No Photo Submitted</span>
+        </div>
+
+        {/* Floating Category Pill on Photo */}
+        <div className="absolute top-3 left-3 flex items-center gap-1.5 rounded-full bg-slate-900/80 px-2.5 py-1 text-[11px] font-bold text-white shadow-sm backdrop-blur-xs">
+          <span>{catIcon}</span>
+          <span className="truncate max-w-[120px]">{hazard.category}</span>
+        </div>
+
+        {/* Floating Severity Badge */}
+        <div className="absolute top-3 right-3">
           <Badge value={hazard.severity} kind="severity" />
         </div>
+      </div>
 
-        <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-600 truncate" title={hazard.address}>
-          <MapPin size={13} className="shrink-0 text-brand" />
-          <span className="truncate">{hazard.address}</span>
-        </p>
+      {/* Card Content */}
+      <div className="p-4 space-y-3">
+        <div>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-bold text-slate-900 text-sm truncate group-hover:text-teal-700 transition-colors">
+              {hazard.category}
+            </h3>
+            <Badge value={hazard.status} />
+          </div>
 
-        <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
-          <Badge value={hazard.status} />
-          {hazard.trafficImpact !== 'no' && (
-            <span className="flex items-center gap-1 text-slate-500 font-medium">
-              <Car size={13} />
-              Traffic affected
-            </span>
-          )}
+          <p
+            className="mt-1.5 flex items-start gap-1.5 text-xs text-slate-600 line-clamp-1"
+            title={hazard.address}
+          >
+            <MapPin size={13} className="shrink-0 text-teal-600 mt-0.5" />
+            <span className="truncate">{hazard.address}</span>
+          </p>
         </div>
 
-        <p className="mt-2 text-[11px] text-slate-400 text-right">
-          Reported {ago(hazard.reportedAt)}
-        </p>
+        {hazard.description && (
+          <p className="text-xs text-slate-500 line-clamp-2 italic leading-relaxed">
+            "{hazard.description}"
+          </p>
+        )}
+
+        {/* Card Footer */}
+        <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <div className="flex items-center gap-1.5">
+            {hazard.trafficImpact === 'yes' && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md">
+                <Car size={12} />
+                Traffic slowed
+              </span>
+            )}
+          </div>
+
+          <span className="text-[11px] text-slate-400 font-medium">
+            {ago(hazard.reportedAt)}
+          </span>
+        </div>
       </div>
     </Link>
   );

@@ -286,7 +286,8 @@ router.post("/", authenticateToken, async (req, res) => {
     };
 
     // Attempt insert with complete payload
-    let { data, error } = await supabase
+    const dbClient = supabase.getScopedClient ? supabase.getScopedClient(req) : supabase;
+    let { data, error } = await dbClient
       .from(tableName)
       .insert([reportPayload])
       .select()
@@ -307,7 +308,7 @@ router.post("/", authenticateToken, async (req, res) => {
         status: "REPORTED"
       };
 
-      const retryRes = await supabase
+      const retryRes = await dbClient
         .from(tableName)
         .insert([minimalPayload])
         .select()

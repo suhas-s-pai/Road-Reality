@@ -9,6 +9,9 @@ import Home from "./pages/Home";
 import Explore from "./pages/Explore";
 import HazardDetails from "./pages/HazardDetails";
 import ReportHazard from "./pages/ReportHazard";
+import MyReports from "./pages/MyReports";
+import Notifications from "./pages/Notifications";
+import Profile from "./pages/Profile";
 import SimplePage from "./pages/SimplePage";
 import AdminDashboard from "./pages/AdminDashboard";
 import Auth from "./pages/Auth";
@@ -102,9 +105,9 @@ export default function App() {
                     <Route path="/explore" element={<Explore />} />
                     <Route path="/hazards/:id" element={<HazardDetails />} />
                     <Route path="/report" element={<ReportHazard />} />
-                    <Route path="/my-reports" element={<SimplePage type="reports" />} />
-                    <Route path="/profile" element={<SimplePage type="profile" />} />
-                    <Route path="/notifications" element={<SimplePage type="notifications" />} />
+                    <Route path="/my-reports" element={<MyReports />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/notifications" element={<Notifications />} />
                     <Route path="/admin" element={<AdminRoute />} />
                     <Route path="*" element={<SimplePage type="notfound" />} />
                   </Routes>

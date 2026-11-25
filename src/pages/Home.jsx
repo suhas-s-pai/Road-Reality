@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { getHazards, getNearbyHazards } from '../services/hazardService';
 import { useUserLocation } from '../hooks/useUserLocation';
-import { Badge } from '../components/Badges';
+import HazardCard from '../components/HazardCard';
 
 const categoriesGrid = [
   { name: 'Pothole', desc: 'Craters, road cracks & surface damage', icon: '🕳️' },
@@ -164,53 +164,7 @@ export default function Home() {
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {recentReports.map((r) => (
-                <div
-                  key={r.id}
-                  className="card overflow-hidden bg-white hover:border-teal-400 hover:shadow-md transition flex flex-col justify-between"
-                >
-                  <div>
-                    {r.imageUrl ? (
-                      <img src={r.imageUrl} alt={r.category} className="h-44 w-full object-cover border-b" />
-                    ) : (
-                      <div className="h-32 w-full bg-slate-100 flex flex-col items-center justify-center text-slate-400 border-b">
-                        <AlertTriangle size={24} className="text-slate-300 mb-1" />
-                        <span className="text-xs font-semibold">No photograph attached</span>
-                      </div>
-                    )}
-
-                    <div className="p-5 space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-base font-extrabold text-slate-900">{r.category}</span>
-                        <Badge value={r.status} />
-                      </div>
-
-                      <p className="text-xs text-slate-600 flex items-start gap-1">
-                        <MapPin size={14} className="text-teal-600 shrink-0 mt-0.5" />
-                        <span className="line-clamp-1">{r.address || 'Address pending'}</span>
-                      </p>
-
-                      {r.description ? (
-                        <p className="text-xs text-slate-500 line-clamp-2 italic">"{r.description}"</p>
-                      ) : (
-                        <p className="text-xs text-slate-400 italic">No description provided</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="p-5 pt-0 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                    <span className="flex items-center gap-1">
-                      <Clock size={13} />
-                      {r.reportedAt ? new Date(r.reportedAt).toLocaleDateString() : 'Recent'}
-                    </span>
-
-                    <Link
-                      to={`/hazards/${r.id}`}
-                      className="font-bold text-teal-700 hover:text-teal-900 hover:underline flex items-center gap-0.5"
-                    >
-                      View Details →
-                    </Link>
-                  </div>
-                </div>
+                <HazardCard hazard={r} key={r.id} />
               ))}
             </div>
           )}
