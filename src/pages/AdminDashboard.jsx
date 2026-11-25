@@ -31,7 +31,12 @@ import {
   Activity,
   Crown,
   Layers,
-  ArrowRight
+  ArrowRight,
+  UserPlus,
+  Send,
+  Key,
+  ShieldCheck,
+  AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -41,7 +46,11 @@ import {
   updateAdminReport,
   updateUserRole,
   deleteHazard,
-  getHazards
+  getHazards,
+  getAdminManagementData,
+  addAdminAccount,
+  removeAdminAccount,
+  cancelAdminInvitation
 } from '../services/hazardService';
 import { Badge } from '../components/Badges';
 
@@ -55,10 +64,10 @@ const AUTHORITY_DEPARTMENTS = [
 ];
 
 export default function AdminDashboard() {
-  const { user: currentUser, isAdmin, loading: authLoading, session } = useAuth();
+  const { user: currentUser, isAdmin, loading: authLoading, session, refreshRole, setRole } = useAuth();
   const navigate = useNavigate();
 
-  // Sidebar navigation tabs: 'dashboard' | 'reports' | 'users' | 'assignments' | 'analytics' | 'settings'
+  // Sidebar navigation tabs: 'dashboard' | 'reports' | 'adminManagement' | 'users' | 'assignments' | 'analytics' | 'settings'
   const [activeTab, setActiveTab] = useState('dashboard');
 
   const [stats, setStats] = useState({
@@ -75,6 +84,15 @@ export default function AdminDashboard() {
   const [usersList, setUsersList] = useState([]);
   const [reportsList, setReportsList] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Admin Access & Management State
+  const [adminsList, setAdminsList] = useState([]);
+  const [invitationsList, setInvitationsList] = useState([]);
+  const [auditLogsList, setAuditLogsList] = useState([]);
+  const [newAdminEmail, setNewAdminEmail] = useState('');
+  const [newAdminName, setNewAdminName] = useState('');
+  const [isAddingAdmin, setIsAddingAdmin] = useState(false);
+  const [confirmRemovalModal, setConfirmRemovalModal] = useState({ open: false, target: null, isSelfDemotion: false });
 
   // Filters & search
   const [searchQuery, setSearchQuery] = useState('');
@@ -94,6 +112,21 @@ export default function AdminDashboard() {
   const [statusMessage, setStatusMessage] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
   const [copiedSql, setCopiedSql] = useState(false);
+
+  // Load admin management dataset (admins, invitations, audit logs)
+  const loadAdminManagementData = async () => {
+    if (!session?.access_token) return;
+    try {
+      const data = await getAdminManagementData(session.access_token);
+      if (data && data.success) {
+        setAdminsList(data.admins || []);
+        setInvitationsList(data.invitations || []);
+        setAuditLogsList(data.auditLogs || []);
+      }
+    } catch (err) {
+      console.warn('Failed to load admin management data:', err.message);
+    }
+  };
 
   // Load all live admin data from backend/Supabase
   const loadPortalData = async () => {
@@ -119,6 +152,8 @@ export default function AdminDashboard() {
       if (reportsRes.status === 'fulfilled' && reportsRes.value) {
         setReportsList(reportsRes.value);
       }
+
+      await loadAdminManagementData();
 
       const failures = [statsRes, usersRes, reportsRes].filter((r) => r.status === 'rejected');
       if (failures.length > 0) {
@@ -232,8 +267,107 @@ export default function AdminDashboard() {
     }
   };
 
-  // Promote or demote user role
+  // Add or invite administrator by email
+  const handleAddAdmin = async (e) => {
+    if (e) e.preventDefault();
+    if (!newAdminEmail || !newAdminEmail.trim() || !newAdminEmail.includes('@')) {
+      setErrorMessage("Please enter a valid Gmail / email address.");
+      return;
+    }
+    setIsAddingAdmin(true);
+    setStatusMessage(null);
+    setErrorMessage(null);
+    try {
+      const res = await addAdminAccount(newAdminEmail.trim(), newAdminName.trim(), session?.access_token);
+      setStatusMessage(res.message || "Administrator added / invited successfully.");
+      setNewAdminEmail('');
+      setNewAdminName('');
+      await Promise.all([loadAdminManagementData(), loadPortalData()]);
+    } catch (err) {
+      console.error("Add admin error:", err);
+      setErrorMessage(err.message || "Failed to add administrator.");
+    } finally {
+      setIsAddingAdmin(false);
+    }
+  };
+
+  // Open confirmation modal for removing an admin
+  const handleInitiateRemoveAdmin = (admin) => {
+    if (adminsList.length <= 1) {
+      setErrorMessage("Action blocked: Road Reality requires at least one active administrator. Please promote or add another administrator first.");
+      return;
+    }
+
+    const isSelf = Boolean(
+      (currentUser?.id && admin.id && currentUser.id === admin.id) ||
+      (currentUser?.email && admin.email && currentUser.email.toLowerCase() === admin.email.toLowerCase())
+    );
+
+    setConfirmRemovalModal({
+      open: true,
+      target: admin,
+      isSelfDemotion: isSelf
+    });
+  };
+
+  // Execute confirmed removal of an administrator
+  const handleConfirmRemoveAdmin = async () => {
+    if (!confirmRemovalModal.target) return;
+    const target = confirmRemovalModal.target;
+    const isSelf = confirmRemovalModal.isSelfDemotion;
+
+    setConfirmRemovalModal({ open: false, target: null, isSelfDemotion: false });
+    setActionLoadingId(target.id);
+    setStatusMessage(null);
+    setErrorMessage(null);
+
+    try {
+      const res = await removeAdminAccount({ id: target.id, email: target.email }, session?.access_token);
+
+      if (res.selfDemoted || isSelf) {
+        setStatusMessage(res.message || "You have removed your admin privileges.");
+        if (setRole) setRole('user');
+        if (refreshRole) await refreshRole();
+        navigate('/', { replace: true });
+        return;
+      }
+
+      setStatusMessage(res.message || `Administrator ${target.email} removed.`);
+      await Promise.all([loadAdminManagementData(), loadPortalData()]);
+    } catch (err) {
+      console.error("Remove admin error:", err);
+      setErrorMessage(err.message || "Failed to remove administrator.");
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // Cancel pending invitation
+  const handleCancelInvitation = async (invitationId) => {
+    setActionLoadingId(invitationId);
+    setStatusMessage(null);
+    setErrorMessage(null);
+    try {
+      await cancelAdminInvitation(invitationId, session?.access_token);
+      setStatusMessage("Invitation revoked.");
+      await loadAdminManagementData();
+    } catch (err) {
+      setErrorMessage(err.message || "Failed to cancel invitation.");
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // Promote or demote user role from Users tab
   const handleRoleChange = async (targetUserId, newRole) => {
+    if (newRole === 'user') {
+      const targetUser = usersList.find((u) => u.id === targetUserId);
+      if (targetUser) {
+        handleInitiateRemoveAdmin(targetUser);
+        return;
+      }
+    }
+
     setActionLoadingId(targetUserId);
     setStatusMessage(null);
     setErrorMessage(null);
@@ -245,8 +379,7 @@ export default function AdminDashboard() {
         prev.map((u) => (u.id === targetUserId ? { ...u, role: newRole } : u))
       );
 
-      const newStats = await getAdminStats(session?.access_token);
-      if (newStats) setStats(newStats);
+      await Promise.all([loadAdminManagementData(), loadPortalData()]);
     } catch (err) {
       console.error('Role update error:', err);
       setErrorMessage(err.message || 'Failed to update user role.');
@@ -497,6 +630,7 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
             {[
               { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
               { id: 'reports', label: `All Reports (${reportsList.length})`, icon: ShieldAlert },
+              { id: 'adminManagement', label: `Admin Access (${adminsList.length})`, icon: Crown },
               { id: 'users', label: `Users (${usersList.length})`, icon: Users },
               { id: 'assignments', label: 'Assignments', icon: Briefcase },
               { id: 'analytics', label: 'Analytics', icon: BarChart3 },
@@ -922,6 +1056,326 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
           )}
 
           {/* ==================================================================== */}
+          {/* 2.5 ADMIN MANAGEMENT TAB */}
+          {/* ==================================================================== */}
+          {activeTab === 'adminManagement' && (
+            <div className="space-y-6">
+              {/* Header Card */}
+              <div className="card p-6 bg-[#191D20] border-[#2E363D] rounded-3xl shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#F5A623]/15 text-[#F5A623] border border-[#F5A623]/30 shadow-amber-glow">
+                    <Crown size={24} className="fill-[#F5A623]" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-black text-[#F5F2ED] font-display">Administrator Access & Role Management</h2>
+                    <p className="text-xs text-[#A8A8A3] mt-0.5">
+                      Manage verified municipal administrators, invite new staff via Google OAuth, and inspect audit logs.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="rounded-xl bg-[#22272B] border border-[#2E363D] px-3 py-1.5 text-center">
+                    <span className="text-[10px] text-[#A8A8A3] block uppercase tracking-wider">Admins</span>
+                    <span className="text-sm font-bold text-[#F5A623]">{adminsList.length}</span>
+                  </div>
+                  <div className="rounded-xl bg-[#22272B] border border-[#2E363D] px-3 py-1.5 text-center">
+                    <span className="text-[10px] text-[#A8A8A3] block uppercase tracking-wider">Pending</span>
+                    <span className="text-sm font-bold text-[#E8C18A]">{invitationsList.length}</span>
+                  </div>
+                  <div className="rounded-xl bg-[#22272B] border border-[#2E363D] px-3 py-1.5 text-center">
+                    <span className="text-[10px] text-[#A8A8A3] block uppercase tracking-wider">Audit Logs</span>
+                    <span className="text-sm font-bold text-[#06B6D4]">{auditLogsList.length}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Add / Invite Administrator Form */}
+              <div className="card p-6 bg-[#191D20] border-[#2E363D] rounded-3xl shadow-2xl space-y-4">
+                <div className="flex items-center gap-2 text-sm font-bold text-[#F5F2ED]">
+                  <UserPlus size={18} className="text-[#F5A623]" />
+                  <span>Add or Invite New Administrator</span>
+                </div>
+
+                <form onSubmit={handleAddAdmin} className="space-y-4">
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-[#F5F2ED] mb-1.5">
+                        Administrator Full Name
+                      </label>
+                      <input
+                        type="text"
+                        value={newAdminName}
+                        onChange={(e) => setNewAdminName(e.target.value)}
+                        placeholder="e.g. Officer Anita Rao"
+                        className="input text-xs bg-[#101417] border-[#2E363D] w-full"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-[#F5F2ED] mb-1.5">
+                        Gmail Address <span className="text-[#F5A623]">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={newAdminEmail}
+                        onChange={(e) => setNewAdminEmail(e.target.value)}
+                        placeholder="e.g. anita.rao@gmail.com"
+                        className="input text-xs bg-[#101417] border-[#2E363D] w-full"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-[#2E363D] bg-[#22272B]/60 p-3.5 text-xs text-[#A8A8A3] leading-relaxed">
+                    <p className="flex items-start gap-2">
+                      <ShieldCheck size={16} className="text-[#F5A623] shrink-0 mt-0.5" />
+                      <span>
+                        <strong className="text-[#F5F2ED]">Google OAuth Verification:</strong> If the user is already registered in Road Reality, their account is immediately promoted to Administrator. If they have not signed in yet, an invitation will be recorded and administrative access will be automatically granted when they sign in with this Google account.
+                      </span>
+                    </p>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={isAddingAdmin}
+                      className="btn btn-accent text-xs font-bold py-2.5 px-6 shadow-amber-glow flex items-center gap-2"
+                    >
+                      {isAddingAdmin ? (
+                        <>
+                          <RefreshCw size={14} className="animate-spin" />
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Send size={14} />
+                          <span>Grant / Invite Administrator</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Active Administrators Roster Table */}
+              <div className="card bg-[#191D20] border-[#2E363D] rounded-3xl overflow-hidden shadow-2xl">
+                <div className="p-5 border-b border-[#2E363D] flex items-center justify-between">
+                  <div>
+                    <h3 className="text-base font-black text-[#F5F2ED] font-display flex items-center gap-2">
+                      <Crown size={16} className="text-[#F5A623]" />
+                      <span>Active Administrators ({adminsList.length})</span>
+                    </h3>
+                    <p className="text-xs text-[#A8A8A3]">Accounts with full administrative and verification privileges</p>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-[#101417] text-[10px] font-black uppercase tracking-wider text-[#A8A8A3] border-b border-[#2E363D]">
+                      <tr>
+                        <th className="px-4 py-3.5">Administrator</th>
+                        <th className="px-4 py-3.5">Gmail / Account</th>
+                        <th className="px-4 py-3.5">Role</th>
+                        <th className="px-4 py-3.5">Added Date</th>
+                        <th className="px-4 py-3.5 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#2E363D]">
+                      {adminsList.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="px-4 py-8 text-center text-[#A8A8A3]">
+                            Loading administrators...
+                          </td>
+                        </tr>
+                      ) : (
+                        adminsList.map((admin) => {
+                          const isCurrentUser = Boolean(
+                            (currentUser?.id && admin.id && currentUser.id === admin.id) ||
+                            (currentUser?.email && admin.email && currentUser.email.toLowerCase() === admin.email.toLowerCase())
+                          );
+                          const isOnlyAdmin = adminsList.length <= 1;
+
+                          return (
+                            <tr key={admin.id || admin.email} className="hover:bg-[#22272B] transition">
+                              <td className="px-4 py-3.5 font-bold text-[#F5F2ED] flex items-center gap-2.5">
+                                <div className="grid h-8 w-8 place-items-center rounded-full bg-[#F5A623]/20 border border-[#F5A623]/40 text-[#F5A623] font-bold text-xs">
+                                  {admin.full_name ? admin.full_name[0]?.toUpperCase() : (admin.email ? admin.email[0]?.toUpperCase() : 'A')}
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span>{admin.full_name || 'Administrator'}</span>
+                                    {isCurrentUser && (
+                                      <span className="rounded-md bg-[#F5A623]/20 text-[#F5A623] border border-[#F5A623]/30 px-1.5 py-0.2 text-[9px] font-extrabold">
+                                        YOU
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+
+                              <td className="px-4 py-3.5 font-mono text-[#E8C18A]">
+                                {admin.email}
+                              </td>
+
+                              <td className="px-4 py-3.5">
+                                <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold bg-[#F5A623]/15 text-[#F5A623] border border-[#F5A623]/30">
+                                  <Crown size={11} className="fill-[#F5A623]" />
+                                  Administrator
+                                </span>
+                              </td>
+
+                              <td className="px-4 py-3.5 text-[#A8A8A3] font-mono text-[11px]">
+                                {admin.created_at ? new Date(admin.created_at).toLocaleDateString() : 'Active'}
+                              </td>
+
+                              <td className="px-4 py-3.5 text-right">
+                                <button
+                                  onClick={() => handleInitiateRemoveAdmin(admin)}
+                                  disabled={isOnlyAdmin || actionLoadingId === admin.id}
+                                  title={isOnlyAdmin ? 'Cannot remove the last remaining administrator' : 'Remove administrator role'}
+                                  className={`btn text-xs py-1 px-3 border transition ${
+                                    isOnlyAdmin
+                                      ? 'opacity-40 cursor-not-allowed border-[#2E363D] text-[#A8A8A3]'
+                                      : isCurrentUser
+                                      ? 'border-[#EF4444]/40 text-[#EF4444] hover:bg-[#EF4444]/15'
+                                      : 'border-[#2E363D] text-[#EF4444] hover:bg-[#EF4444]/15'
+                                  }`}
+                                >
+                                  {isOnlyAdmin
+                                    ? 'Sole Admin (Protected)'
+                                    : isCurrentUser
+                                    ? 'Step Down / Remove Role'
+                                    : 'Remove Admin'}
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Pending Invitations Table */}
+              {invitationsList.length > 0 && (
+                <div className="card bg-[#191D20] border-[#2E363D] rounded-3xl overflow-hidden shadow-2xl">
+                  <div className="p-5 border-b border-[#2E363D] flex items-center justify-between">
+                    <div>
+                      <h3 className="text-base font-black text-[#F5F2ED] font-display flex items-center gap-2">
+                        <Mail size={16} className="text-[#E8C18A]" />
+                        <span>Pending Invitations ({invitationsList.length})</span>
+                      </h3>
+                      <p className="text-xs text-[#A8A8A3]">Google accounts awaiting first sign-in to claim Admin access</p>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-[#101417] text-[10px] font-black uppercase tracking-wider text-[#A8A8A3] border-b border-[#2E363D]">
+                        <tr>
+                          <th className="px-4 py-3.5">Invited User</th>
+                          <th className="px-4 py-3.5">Gmail Address</th>
+                          <th className="px-4 py-3.5">Invited By</th>
+                          <th className="px-4 py-3.5">Status</th>
+                          <th className="px-4 py-3.5 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#2E363D]">
+                        {invitationsList.map((inv) => (
+                          <tr key={inv.id} className="hover:bg-[#22272B] transition">
+                            <td className="px-4 py-3.5 font-bold text-[#F5F2ED]">
+                              {inv.full_name || 'Invited Staff'}
+                            </td>
+                            <td className="px-4 py-3.5 font-mono text-[#E8C18A]">
+                              {inv.email}
+                            </td>
+                            <td className="px-4 py-3.5 text-[#A8A8A3] text-[11px]">
+                              {inv.invited_by_email || 'Administrator'}
+                            </td>
+                            <td className="px-4 py-3.5">
+                              <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold bg-[#E8C18A]/15 text-[#E8C18A] border border-[#E8C18A]/30">
+                                <span className="h-1.5 w-1.5 rounded-full bg-[#E8C18A] animate-pulse" />
+                                Pending First Sign-In
+                              </span>
+                            </td>
+                            <td className="px-4 py-3.5 text-right">
+                              <button
+                                onClick={() => handleCancelInvitation(inv.id)}
+                                disabled={actionLoadingId === inv.id}
+                                className="btn btn-secondary text-xs py-1 px-3 border-[#2E363D] text-[#EF4444] hover:bg-[#EF4444]/15"
+                              >
+                                Revoke Invite
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Administrative Audit Trail */}
+              <div className="card bg-[#191D20] border-[#2E363D] rounded-3xl overflow-hidden shadow-2xl">
+                <div className="p-5 border-b border-[#2E363D] flex items-center justify-between">
+                  <div>
+                    <h3 className="text-base font-black text-[#F5F2ED] font-display flex items-center gap-2">
+                      <Activity size={16} className="text-[#06B6D4]" />
+                      <span>Security & Administration Audit Trail</span>
+                    </h3>
+                    <p className="text-xs text-[#A8A8A3]">Immutable record of all administrator additions, role changes, and removals</p>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto max-h-72 overflow-y-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-[#101417] text-[10px] font-black uppercase tracking-wider text-[#A8A8A3] border-b border-[#2E363D] sticky top-0">
+                      <tr>
+                        <th className="px-4 py-3">Timestamp</th>
+                        <th className="px-4 py-3">Action</th>
+                        <th className="px-4 py-3">Actor</th>
+                        <th className="px-4 py-3">Target</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#2E363D]">
+                      {auditLogsList.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="px-4 py-6 text-center text-[#A8A8A3]">
+                            No audit events recorded yet.
+                          </td>
+                        </tr>
+                      ) : (
+                        auditLogsList.map((log) => (
+                          <tr key={log.id} className="hover:bg-[#22272B] transition font-mono text-[11px]">
+                            <td className="px-4 py-2.5 text-[#A8A8A3]">
+                              {log.created_at ? new Date(log.created_at).toLocaleString() : 'N/A'}
+                            </td>
+                            <td className="px-4 py-2.5 font-bold">
+                              <span className={`px-2 py-0.5 rounded-md text-[10px] ${
+                                log.action === 'REMOVE_ADMIN' || log.action === 'SELF_DEMOTION'
+                                  ? 'bg-[#EF4444]/15 text-[#EF4444] border border-[#EF4444]/30'
+                                  : log.action === 'CLAIM_INVITATION'
+                                  ? 'bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30'
+                                  : 'bg-[#F5A623]/15 text-[#F5A623] border border-[#F5A623]/30'
+                              }`}>
+                                {log.action}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2.5 text-[#F5F2ED]">{log.actor_email || 'System'}</td>
+                            <td className="px-4 py-2.5 text-[#E8C18A]">{log.target_email || 'N/A'}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ==================================================================== */}
           {/* 3. USERS MANAGEMENT TAB */}
           {/* ==================================================================== */}
           {activeTab === 'users' && (
@@ -967,12 +1421,28 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
                           </span>
                         </td>
                         <td className="px-4 py-3.5 text-right">
-                          <button
-                            onClick={() => handleRoleChange(u.id, u.role === 'admin' ? 'user' : 'admin')}
-                            className="btn btn-secondary text-xs py-1 px-3 border-[#2E363D] text-[#F5F2ED]"
-                          >
-                            {u.role === 'admin' ? 'Revoke Admin' : 'Make Admin'}
-                          </button>
+                          {u.role === 'admin' ? (
+                            <button
+                              onClick={() => handleInitiateRemoveAdmin(u)}
+                              disabled={adminsList.length <= 1 || actionLoadingId === u.id}
+                              title={adminsList.length <= 1 ? "Cannot remove the only remaining administrator" : "Revoke administrator role"}
+                              className={`btn text-xs py-1 px-3 border transition ${
+                                adminsList.length <= 1
+                                  ? 'opacity-40 cursor-not-allowed border-[#2E363D] text-[#A8A8A3]'
+                                  : 'border-[#2E363D] text-[#EF4444] hover:bg-[#EF4444]/15'
+                              }`}
+                            >
+                              {adminsList.length <= 1 ? 'Sole Admin' : 'Revoke Admin'}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleRoleChange(u.id, 'admin')}
+                              disabled={actionLoadingId === u.id}
+                              className="btn btn-secondary text-xs py-1 px-3 border-[#2E363D] text-[#F5A623] hover:border-[#F5A623] hover:bg-[#F5A623]/10"
+                            >
+                              Make Admin
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -1201,6 +1671,59 @@ WHERE id = (SELECT id FROM auth.users WHERE email = 'suhaspai13@gmail.com' LIMIT
                 className="btn btn-accent text-xs font-bold py-2 px-5 shadow-amber-glow"
               >
                 {actionLoadingId === selectedReport.id ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================================== */}
+      {/* CONFIRMATION MODAL FOR ADMIN REMOVAL / ROLE TRANSFER */}
+      {/* ==================================================================== */}
+      {confirmRemovalModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#101417]/85 backdrop-blur-sm animate-in fade-in">
+          <div className="relative w-full max-w-md rounded-3xl border border-[#EF4444]/40 bg-[#191D20] p-6 shadow-2xl space-y-4 text-xs text-[#F5F2ED]">
+            <div className="flex items-center gap-3 border-b border-[#2E363D] pb-3 text-[#EF4444]">
+              <div className="p-2.5 rounded-2xl bg-[#EF4444]/15 border border-[#EF4444]/30">
+                <AlertTriangle size={24} />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-[#F5F2ED] font-display">
+                  {confirmRemovalModal.isSelfDemotion ? 'Confirm Role Transfer / Self-Demotion' : 'Revoke Administrator Access'}
+                </h3>
+                <p className="text-[11px] text-[#A8A8A3]">Administrative Security Authorization</p>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-[#22272B] border border-[#2E363D] text-[#A8A8A3] leading-relaxed text-[11px] space-y-2">
+              {confirmRemovalModal.isSelfDemotion ? (
+                <>
+                  <p className="text-[#EF4444] font-bold">
+                    Warning: You are about to step down and remove your own administrator privileges.
+                  </p>
+                  <p>
+                    Your administrator privileges will be immediately revoked. You will be redirected out of the Admin Portal to the citizen homepage.
+                  </p>
+                </>
+              ) : (
+                <p>
+                  Are you sure you want to remove administrator privileges for <strong className="text-[#F5F2ED] font-mono">{confirmRemovalModal.target?.email}</strong>? They will become a standard citizen user.
+                </p>
+              )}
+            </div>
+
+            <div className="pt-2 flex justify-end gap-3">
+              <button
+                onClick={() => setConfirmRemovalModal({ open: false, target: null, isSelfDemotion: false })}
+                className="btn btn-secondary text-xs py-2 px-4 border-[#2E363D] text-[#F5F2ED]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmRemoveAdmin}
+                className="btn text-xs font-bold py-2 px-4 rounded-xl bg-[#EF4444] text-white hover:bg-[#DC2626] transition shadow-md"
+              >
+                {confirmRemovalModal.isSelfDemotion ? 'Demote Myself & Exit Portal' : 'Confirm Removal'}
               </button>
             </div>
           </div>

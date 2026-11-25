@@ -73,9 +73,12 @@ async function requireAdmin(req, res, next) {
         console.error("Error fetching user profile for admin check:", error);
       }
 
-      // Bootstrap fallback: If process.env.ADMIN_EMAIL matches user email, allow admin
-      const isAdminEmail = process.env.ADMIN_EMAIL && process.env.ADMIN_EMAIL.toLowerCase() === req.user.email.toLowerCase();
+      // Authoritative check: profile.role must be 'admin'
       const isAdminRole = profile && profile.role === "admin";
+
+      // Bootstrap fallback ONLY if profile does not exist in DB yet
+      const isAdminEmail = !profile && process.env.ADMIN_EMAIL && req.user.email &&
+        process.env.ADMIN_EMAIL.toLowerCase() === req.user.email.toLowerCase();
 
       if (!isAdminRole && !isAdminEmail) {
         return res.status(403).json({

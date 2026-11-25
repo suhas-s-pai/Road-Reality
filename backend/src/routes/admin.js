@@ -2,6 +2,14 @@ const express = require("express");
 const supabase = require("../supabase");
 const { getReportsTable } = require("../dbUtils");
 const { requireAdmin } = require("../middleware/auth");
+const {
+  listAdmins,
+  getInvitations,
+  getAuditLogs,
+  addOrInviteAdmin,
+  removeAdmin,
+  cancelInvitation
+} = require("../adminManagement");
 
 const router = express.Router();
 
@@ -320,6 +328,136 @@ router.post("/users/:id/role", requireAdmin, async (req, res) => {
   } catch (err) {
     console.error("Admin role change error:", err);
     res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+/*
+  ==============================================================================
+  ADMIN MANAGEMENT API ENDPOINTS
+  ==============================================================================
+*/
+
+/**
+ * GET /api/admin/management
+ * Fetches all active admins, pending invitations, and recent audit logs
+ */
+router.get("/management", requireAdmin, async (req, res) => {
+  try {
+    const [admins, invitations, auditLogs] = await Promise.all([
+      listAdmins(),
+      getInvitations(),
+      getAuditLogs(50)
+    ]);
+
+    res.json({
+      success: true,
+      admins: admins || [],
+      invitations: invitations || [],
+      auditLogs: auditLogs || []
+    });
+  } catch (err) {
+    console.error("[Admin Management] Error loading data:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to load admin management data."
+    });
+  }
+});
+
+/**
+ * POST /api/admin/management/add
+ * Add or invite an administrator by email and name
+ */
+router.post("/management/add", requireAdmin, async (req, res) => {
+  try {
+    const { email, fullName } = req.body;
+
+    if (!email || !email.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Email address is required."
+      });
+    }
+
+    const result = await addOrInviteAdmin({
+      email,
+      fullName: fullName ? fullName.trim() : "",
+      actorUser: req.user
+    });
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    res.json(result);
+  } catch (err) {
+    console.error("[Admin Management] Error adding admin:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message || "Failed to process administrator addition."
+    });
+  }
+});
+
+/**
+ * POST /api/admin/management/remove
+ * Remove/demote an administrator
+ */
+router.post("/management/remove", requireAdmin, async (req, res) => {
+  try {
+    const { id, email } = req.body;
+
+    if (!id && !email) {
+      return res.status(400).json({
+        success: false,
+        message: "Target administrator ID or email is required."
+      });
+    }
+
+    const result = await removeAdmin({
+      targetId: id,
+      targetEmail: email,
+      actorUser: req.user
+    });
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    res.json(result);
+  } catch (err) {
+    console.error("[Admin Management] Error removing admin:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message || "Failed to remove administrator."
+    });
+  }
+});
+
+/**
+ * DELETE /api/admin/management/invitations/:id
+ * Revoke/cancel a pending admin invitation
+ */
+router.delete("/management/invitations/:id", requireAdmin, async (req, res) => {
+  try {
+    const invitationId = req.params.id;
+
+    const result = await cancelInvitation({
+      invitationId,
+      actorUser: req.user
+    });
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    res.json(result);
+  } catch (err) {
+    console.error("[Admin Management] Error cancelling invitation:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message || "Failed to cancel invitation."
+    });
   }
 });
 

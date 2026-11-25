@@ -150,16 +150,15 @@ export function AuthProvider({ children }) {
       }
     }
 
-    // Step 3: Prevent silent downgrade of an already confirmed admin role
-    if (role === 'admin' && resolvedRole !== 'admin' && user?.id === currentSession.user.id) {
-      console.warn('[Auth] Retaining existing confirmed admin role for user:', user.email);
-      resolvedRole = 'admin';
-    }
-
     const finalRole = resolvedRole || 'user';
     console.info('[Auth] Final resolved role:', finalRole);
     setRole(finalRole);
     return finalRole;
+  };
+
+  const refreshRole = async () => {
+    if (!session) return 'user';
+    return await resolveUserRole(session);
   };
 
   useEffect(() => {
@@ -352,10 +351,12 @@ export function AuthProvider({ children }) {
         session,
         loading,
         role,
+        setRole,
         isAdmin,
         error,
         signInWithGoogle,
-        signOut
+        signOut,
+        refreshRole
       }}
     >
       {children}

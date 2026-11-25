@@ -1,6 +1,7 @@
 const express = require("express");
 const supabase = require("../supabase");
 const { requireAuth, authenticateToken } = require("../middleware/auth");
+const { claimPendingInvitation } = require("../adminManagement");
 
 const router = express.Router();
 
@@ -17,21 +18,29 @@ router.get("/profile", requireAuth, async (req, res) => {
       });
     }
 
+    // Check and claim any pending admin invitation for this email
+    if (req.user.email) {
+      try {
+        await claimPendingInvitation(req.user.email, req.user.id);
+      } catch (e) {
+        console.warn("[Auth API] Error checking pending invitation:", e.message);
+      }
+    }
+
     const { data: profile, error } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", req.user.id)
       .single();
 
-    // Check bootstrap admin email
-    const isAdminEmail = Boolean(
-      process.env.ADMIN_EMAIL &&
-      req.user.email &&
-      process.env.ADMIN_EMAIL.toLowerCase() === req.user.email.toLowerCase()
-    );
-
     if (error || !profile) {
       // Return basic user info if profile table isn't populated yet
+      const isBootstrapAdmin = Boolean(
+        process.env.ADMIN_EMAIL &&
+        req.user.email &&
+        process.env.ADMIN_EMAIL.toLowerCase() === req.user.email.toLowerCase()
+      );
+
       return res.json({
         success: true,
         user: {
@@ -40,22 +49,13 @@ router.get("/profile", requireAuth, async (req, res) => {
           name: req.user.user_metadata?.full_name || req.user.user_metadata?.name || req.user.email.split("@")[0],
           full_name: req.user.user_metadata?.full_name || req.user.user_metadata?.name || req.user.email.split("@")[0],
           avatar_url: req.user.user_metadata?.avatar_url || "",
-          role: isAdminEmail ? "admin" : "user"
+          role: isBootstrapAdmin ? "admin" : "user"
         }
       });
     }
 
-    const effectiveRole = isAdminEmail ? "admin" : (profile.role || "user");
-
-    // If user matches ADMIN_EMAIL but profile role in DB is not admin, update DB so it stays synchronized
-    if (isAdminEmail && profile.role !== "admin") {
-      supabase
-        .from("profiles")
-        .update({ role: "admin", updated_at: new Date().toISOString() })
-        .eq("id", req.user.id)
-        .then(() => console.log(`[Auth API] Synced role='admin' in DB for ${req.user.email}`))
-        .catch(err => console.warn(`[Auth API] Failed to sync admin role in DB:`, err.message));
-    }
+    // Database role is authoritative
+    const effectiveRole = profile.role || "user";
 
     res.json({
       success: true,
@@ -85,21 +85,39 @@ router.post("/sync-profile", requireAuth, async (req, res) => {
     const user = req.user;
     const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email.split("@")[0];
     const avatar_url = user.user_metadata?.avatar_url || null;
-    const isAdminEmail = Boolean(
-      process.env.ADMIN_EMAIL &&
-      user.email &&
-      process.env.ADMIN_EMAIL.toLowerCase() === user.email.toLowerCase()
-    );
 
-    // Check existing profile to preserve an existing admin role
+    // Check and claim any pending admin invitation
+    let inviteClaimed = false;
+    if (user.email) {
+      try {
+        inviteClaimed = await claimPendingInvitation(user.email, user.id);
+      } catch (e) {
+        console.warn("[Auth API] Error checking pending invitation on sync:", e.message);
+      }
+    }
+
+    // Check existing profile
     const { data: existingProfile } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", user.id)
       .single();
 
-    const existingRole = existingProfile?.role || "user";
-    const finalRole = isAdminEmail ? "admin" : existingRole;
+    let finalRole = "user";
+    if (inviteClaimed) {
+      finalRole = "admin";
+    } else if (existingProfile && existingProfile.role) {
+      // Authoritative: Preserve whatever role is already in the database (admin or user)
+      finalRole = existingProfile.role;
+    } else {
+      // New user: check if bootstrap admin email when no profile exists
+      const isBootstrapAdmin = Boolean(
+        process.env.ADMIN_EMAIL &&
+        user.email &&
+        process.env.ADMIN_EMAIL.toLowerCase() === user.email.toLowerCase()
+      );
+      finalRole = isBootstrapAdmin ? "admin" : "user";
+    }
 
     const profileData = {
       id: user.id,
@@ -117,7 +135,7 @@ router.post("/sync-profile", requireAuth, async (req, res) => {
       .select()
       .single();
 
-    // Fallback if full_name or name column is missing in older table schema
+    // Fallback if full_name column is missing in older table schema
     if (error && error.code === "42703") {
       const fallbackData = {
         id: user.id,
@@ -137,7 +155,7 @@ router.post("/sync-profile", requireAuth, async (req, res) => {
     }
 
     if (error) {
-      console.warn("Profile sync warning (schema may need setup):", error.message);
+      console.warn("Profile sync warning:", error.message);
       return res.json({
         success: true,
         user: {

@@ -22,10 +22,10 @@ function ProtectedRoute({ children }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen grid place-items-center bg-surface p-4">
+      <div className="min-h-screen grid place-items-center bg-[#101417] p-4">
         <div className="flex flex-col items-center gap-3">
-          <RefreshCw className="animate-spin text-brand" size={32} />
-          <p className="text-sm font-semibold text-slate-600">Restoring Road Reality session...</p>
+          <RefreshCw className="animate-spin text-[#F5A623]" size={32} />
+          <p className="text-sm font-semibold text-[#A8A8A3]">Restoring Road Reality session...</p>
         </div>
       </div>
     );
@@ -44,10 +44,10 @@ function AdminRoute() {
 
   if (loading) {
     return (
-      <div className="min-h-screen grid place-items-center bg-surface p-4">
+      <div className="min-h-screen grid place-items-center bg-[#101417] p-4">
         <div className="flex flex-col items-center gap-3">
-          <RefreshCw className="animate-spin text-brand" size={32} />
-          <p className="text-sm font-semibold text-slate-600">Verifying administrator authorization...</p>
+          <RefreshCw className="animate-spin text-[#F5A623]" size={32} />
+          <p className="text-sm font-semibold text-[#A8A8A3]">Verifying administrator authorization...</p>
         </div>
       </div>
     );
@@ -57,7 +57,11 @@ function AdminRoute() {
     return <Navigate to="/login" replace />;
   }
 
-  // AdminDashboard handles role check and displays clear Access Restricted message if role !== 'admin'
+  // Strict route protection: normal users are redirected to citizen homepage
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
   return <AdminDashboard />;
 }
 
@@ -67,10 +71,10 @@ function PublicLoginRoute() {
 
   if (loading) {
     return (
-      <div className="min-h-screen grid place-items-center bg-surface p-4">
+      <div className="min-h-screen grid place-items-center bg-[#101417] p-4">
         <div className="flex flex-col items-center gap-3">
-          <RefreshCw className="animate-spin text-brand" size={32} />
-          <p className="text-sm font-semibold text-slate-600">Restoring Road Reality session...</p>
+          <RefreshCw className="animate-spin text-[#F5A623]" size={32} />
+          <p className="text-sm font-semibold text-[#A8A8A3]">Restoring Road Reality session...</p>
         </div>
       </div>
     );

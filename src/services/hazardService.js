@@ -455,3 +455,90 @@ export async function updateUserRole(userId, role, token) {
 
   return res.json();
 }
+
+/**
+ * Fetch full Admin Management dataset: active admins, invitations, and audit logs
+ */
+export async function getAdminManagementData(token) {
+  if (!token) throw new Error('Admin authentication token required');
+
+  const res = await fetch(`${base}/admin/management`, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.message || 'Failed to fetch admin management data');
+  }
+
+  return res.json();
+}
+
+/**
+ * Add or invite an administrator by email and name
+ */
+export async function addAdminAccount(email, fullName, token) {
+  if (!token) throw new Error('Admin authentication token required');
+
+  const res = await fetch(`${base}/admin/management/add`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ email, fullName })
+  });
+
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    throw new Error(json.message || 'Failed to add administrator');
+  }
+
+  return json;
+}
+
+/**
+ * Remove an administrator
+ */
+export async function removeAdminAccount({ id, email }, token) {
+  if (!token) throw new Error('Admin authentication token required');
+
+  const res = await fetch(`${base}/admin/management/remove`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ id, email })
+  });
+
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    throw new Error(json.message || 'Failed to remove administrator');
+  }
+
+  return json;
+}
+
+/**
+ * Cancel a pending administrator invitation
+ */
+export async function cancelAdminInvitation(invitationId, token) {
+  if (!token) throw new Error('Admin authentication token required');
+
+  const res = await fetch(`${base}/admin/management/invitations/${invitationId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    throw new Error(json.message || 'Failed to cancel invitation');
+  }
+
+  return json;
+}

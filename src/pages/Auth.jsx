@@ -5,19 +5,27 @@ import { useAuth } from '../context/AuthContext';
 import { isSupabaseConfigured } from '../services/supabase';
 
 export default function Auth() {
-  const { user, signInWithGoogle, signOut, loading: authLoading, error: authError } = useAuth();
+  const { user, isAdmin, signInWithGoogle, signOut, loading: authLoading, error: authError } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
 
-  const from = location.state?.from?.pathname || '/';
-
   useEffect(() => {
     if (user && !authLoading) {
-      navigate(from, { replace: true });
+      if (isAdmin) {
+        // Direct admin entry to Admin Portal without displaying user homepage
+        console.log('[Auth] Admin role detected. Redirecting to /admin');
+        navigate('/admin', { replace: true });
+      } else {
+        // Normal user redirection to requested page or citizen homepage
+        const from = location.state?.from?.pathname || '/';
+        const target = from === '/admin' ? '/' : from;
+        console.log('[Auth] Citizen role detected. Redirecting to', target);
+        navigate(target, { replace: true });
+      }
     }
-  }, [user, authLoading, navigate, from]);
+  }, [user, isAdmin, authLoading, navigate, location.state]);
 
   const handleGoogleLogin = async () => {
     setSubmitting(true);
