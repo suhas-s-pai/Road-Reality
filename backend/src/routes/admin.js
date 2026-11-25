@@ -5,10 +5,15 @@ const { requireAdmin } = require("../middleware/auth");
 const {
   listAdmins,
   getInvitations,
+  getAllInvitations,
   getAuditLogs,
   addOrInviteAdmin,
   removeAdmin,
-  cancelInvitation
+  cancelInvitation,
+  listRemovalRequests,
+  createRemovalRequest,
+  respondToRemoveRequest,
+  cancelRemovalRequest
 } = require("../adminManagement");
 
 const router = express.Router();
@@ -111,16 +116,20 @@ router.get("/users", requireAdmin, async (req, res) => {
       });
     }
 
-    const formattedUsers = (profiles || []).map(p => ({
-      id: p.id,
-      email: p.email,
-      name: p.full_name || p.name || (p.email ? p.email.split("@")[0] : "User"),
-      full_name: p.full_name || p.name || (p.email ? p.email.split("@")[0] : "User"),
-      avatar_url: p.avatar_url || "",
-      role: p.role || "user",
-      created_at: p.created_at || new Date().toISOString(),
-      reportCount: reportCountMap[p.id] || 0
-    }));
+    // Format users: Ordinary citizen profiles do NOT expose Google public display names
+    const formattedUsers = (profiles || []).map(p => {
+      const isAdminUser = p.role === "admin";
+      return {
+        id: p.id,
+        email: p.email,
+        name: isAdminUser ? (p.full_name || p.name || "Administrator") : "Citizen",
+        full_name: isAdminUser ? (p.full_name || p.name || "Administrator") : "Citizen",
+        avatar_url: isAdminUser ? (p.avatar_url || "") : "",
+        role: p.role || "user",
+        created_at: p.created_at || new Date().toISOString(),
+        reportCount: reportCountMap[p.id] || 0
+      };
+    });
 
     res.json({
       success: true,
@@ -339,20 +348,22 @@ router.post("/users/:id/role", requireAdmin, async (req, res) => {
 
 /**
  * GET /api/admin/management
- * Fetches all active admins, pending invitations, and recent audit logs
+ * Fetches all active admins, invitations, removal requests, and recent audit logs
  */
 router.get("/management", requireAdmin, async (req, res) => {
   try {
-    const [admins, invitations, auditLogs] = await Promise.all([
+    const [admins, invitations, removalRequests, auditLogs] = await Promise.all([
       listAdmins(),
-      getInvitations(),
-      getAuditLogs(50)
+      getAllInvitations(),
+      listRemovalRequests(),
+      getAuditLogs(60)
     ]);
 
     res.json({
       success: true,
       admins: admins || [],
       invitations: invitations || [],
+      removalRequests: removalRequests || [],
       auditLogs: auditLogs || []
     });
   } catch (err) {
@@ -365,8 +376,43 @@ router.get("/management", requireAdmin, async (req, res) => {
 });
 
 /**
+ * GET /api/admin/notifications
+ * In-app notifications specifically for administrators (e.g. removal requests awaiting approval)
+ */
+router.get("/notifications", requireAdmin, async (req, res) => {
+  try {
+    const allRequests = await listRemovalRequests();
+    const currentEmail = (req.user?.email || "").toLowerCase().trim();
+    const currentId = req.user?.id;
+
+    // Requests targeting this administrator that require their approval
+    const pendingForMe = allRequests.filter(
+      r => r.status === "awaiting_approval" &&
+        ((r.target_id && currentId && r.target_id === currentId) ||
+         (r.target_email && r.target_email.toLowerCase() === currentEmail))
+    );
+
+    // Resolved requests initiated by this administrator
+    const decisionsForMe = allRequests.filter(
+      r => (r.status === "approved" || r.status === "declined") &&
+        ((r.requester_id && currentId && r.requester_id === currentId) ||
+         (r.requester_email && r.requester_email.toLowerCase() === currentEmail))
+    );
+
+    res.json({
+      success: true,
+      pendingApprovalRequests: pendingForMe,
+      decisionUpdates: decisionsForMe
+    });
+  } catch (err) {
+    console.error("[Admin Notifications] Error:", err);
+    res.status(500).json({ success: false, message: "Failed to load admin notifications." });
+  }
+});
+
+/**
  * POST /api/admin/management/add
- * Add or invite an administrator by email and name
+ * Send an administrator invitation by Gmail address and name
  */
 router.post("/management/add", requireAdmin, async (req, res) => {
   try {
@@ -375,7 +421,7 @@ router.post("/management/add", requireAdmin, async (req, res) => {
     if (!email || !email.trim()) {
       return res.status(400).json({
         success: false,
-        message: "Email address is required."
+        message: "Gmail address is required."
       });
     }
 
@@ -400,8 +446,108 @@ router.post("/management/add", requireAdmin, async (req, res) => {
 });
 
 /**
+ * POST /api/admin/management/remove-request
+ * Two-Person Workflow: Admin A requests removal of Admin B
+ */
+router.post("/management/remove-request", requireAdmin, async (req, res) => {
+  try {
+    const { targetId, targetEmail, reason } = req.body;
+
+    if (!targetId && !targetEmail) {
+      return res.status(400).json({
+        success: false,
+        message: "Target administrator ID or email is required."
+      });
+    }
+
+    const result = await createRemovalRequest({
+      targetId,
+      targetEmail,
+      reason,
+      actorUser: req.user
+    });
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    res.json(result);
+  } catch (err) {
+    console.error("[Admin Management] Error creating removal request:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message || "Failed to create removal request."
+    });
+  }
+});
+
+/**
+ * POST /api/admin/management/remove-request/:id/respond
+ * Two-Person Workflow: Target Admin B approves or declines removal request
+ */
+router.post("/management/remove-request/:id/respond", requireAdmin, async (req, res) => {
+  try {
+    const requestId = req.params.id;
+    const { action, decisionNote } = req.body;
+
+    if (!action || !["approve", "decline"].includes(action)) {
+      return res.status(400).json({
+        success: false,
+        message: "Action must be 'approve' or 'decline'."
+      });
+    }
+
+    const result = await respondToRemoveRequest({
+      requestId,
+      action,
+      decisionNote,
+      actorUser: req.user
+    });
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    res.json(result);
+  } catch (err) {
+    console.error("[Admin Management] Error responding to removal request:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message || "Failed to process decision."
+    });
+  }
+});
+
+/**
+ * DELETE /api/admin/management/remove-request/:id
+ * Cancel an open removal request
+ */
+router.delete("/management/remove-request/:id", requireAdmin, async (req, res) => {
+  try {
+    const requestId = req.params.id;
+
+    const result = await cancelRemovalRequest({
+      requestId,
+      actorUser: req.user
+    });
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    res.json(result);
+  } catch (err) {
+    console.error("[Admin Management] Error cancelling removal request:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message || "Failed to cancel removal request."
+    });
+  }
+});
+
+/**
  * POST /api/admin/management/remove
- * Remove/demote an administrator
+ * Direct administrator removal (with single-admin guard)
  */
 router.post("/management/remove", requireAdmin, async (req, res) => {
   try {

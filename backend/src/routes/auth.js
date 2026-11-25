@@ -5,6 +5,23 @@ const { claimPendingInvitation } = require("../adminManagement");
 
 const router = express.Router();
 
+/**
+ * Builds minimal profile data preserving citizen privacy (no Google public display names stored for ordinary users)
+ */
+function buildSanitizedProfileData(user, finalRole, designatedAdminName = null) {
+  const isAdmin = finalRole === "admin";
+  return {
+    id: user.id,
+    email: user.email,
+    name: isAdmin ? (designatedAdminName || "Administrator") : null,
+    full_name: isAdmin ? (designatedAdminName || "Administrator") : null,
+    avatar_url: isAdmin ? (user.user_metadata?.avatar_url || null) : null,
+    role: finalRole
+  };
+}
+
+router.buildSanitizedProfileData = buildSanitizedProfileData;
+
 /*
   GET USER PROFILE AND ROLE
   GET /api/auth/profile
@@ -46,9 +63,9 @@ router.get("/profile", requireAuth, async (req, res) => {
         user: {
           id: req.user.id,
           email: req.user.email,
-          name: req.user.user_metadata?.full_name || req.user.user_metadata?.name || req.user.email.split("@")[0],
-          full_name: req.user.user_metadata?.full_name || req.user.user_metadata?.name || req.user.email.split("@")[0],
-          avatar_url: req.user.user_metadata?.avatar_url || "",
+          name: isBootstrapAdmin ? (req.user.user_metadata?.full_name || req.user.user_metadata?.name || "Administrator") : null,
+          full_name: isBootstrapAdmin ? (req.user.user_metadata?.full_name || req.user.user_metadata?.name || "Administrator") : null,
+          avatar_url: isBootstrapAdmin ? (req.user.user_metadata?.avatar_url || "") : null,
           role: isBootstrapAdmin ? "admin" : "user"
         }
       });
@@ -119,13 +136,12 @@ router.post("/sync-profile", requireAuth, async (req, res) => {
       finalRole = isBootstrapAdmin ? "admin" : "user";
     }
 
+    const isAdmin = finalRole === "admin";
+    const designatedAdminName = isAdmin ? (existingProfile?.full_name || existingProfile?.name || "Administrator") : null;
+
+    // Minimal data collection: ordinary users do NOT have Google public display names stored
     const profileData = {
-      id: user.id,
-      email: user.email,
-      name,
-      full_name: name,
-      avatar_url,
-      role: finalRole,
+      ...buildSanitizedProfileData(user, finalRole, designatedAdminName),
       updated_at: new Date().toISOString()
     };
 
@@ -137,13 +153,7 @@ router.post("/sync-profile", requireAuth, async (req, res) => {
 
     // Fallback if full_name column is missing in older table schema
     if (error && error.code === "42703") {
-      const fallbackData = {
-        id: user.id,
-        email: user.email,
-        name,
-        avatar_url,
-        role: finalRole
-      };
+      const fallbackData = buildSanitizedProfileData(user, finalRole, designatedAdminName);
       const retryRes = await supabase
         .from("profiles")
         .upsert(fallbackData, { onConflict: "id" })

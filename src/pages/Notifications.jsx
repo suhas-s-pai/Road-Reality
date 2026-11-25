@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { getMyReports } from '../services/hazardService';
+import { Link, useNavigate } from 'react-router-dom';
+import { getMyReports, getAdminNotifications, respondToRemovalRequest } from '../services/hazardService';
 import { useAuth } from '../context/AuthContext';
 import {
   Bell,
@@ -12,14 +12,22 @@ import {
   RefreshCw,
   CheckCheck,
   MapPin,
-  ExternalLink
+  ExternalLink,
+  ShieldAlert,
+  AlertCircle,
+  Crown,
+  X
 } from 'lucide-react';
 import { ago } from '../utils/formatters';
 
 export default function Notifications() {
-  const { user, session } = useAuth();
+  const { user, session, isAdmin, setRole, refreshRole } = useAuth();
+  const navigate = useNavigate();
   const [reports, setReports] = useState([]);
+  const [adminNotifs, setAdminNotifs] = useState({ pendingForMe: [], myDecisions: [] });
   const [loading, setLoading] = useState(true);
+  const [actionLoadingId, setActionLoadingId] = useState(null);
+  const [actionMessage, setActionMessage] = useState(null);
   const [filter, setFilter] = useState('ALL');
   const [readIds, setReadIds] = useState(() => {
     try {
@@ -32,10 +40,16 @@ export default function Notifications() {
   const loadNotifications = async () => {
     setLoading(true);
     try {
-      const res = await getMyReports(session?.access_token);
-      setReports(res.data || []);
+      const reportsPromise = getMyReports(session?.access_token).catch(() => ({ data: [] }));
+      const adminPromise = (isAdmin && session?.access_token)
+        ? getAdminNotifications(session.access_token).catch(() => ({ pendingForMe: [], myDecisions: [] }))
+        : Promise.resolve({ pendingForMe: [], myDecisions: [] });
+
+      const [repRes, admRes] = await Promise.all([reportsPromise, adminPromise]);
+      setReports(repRes.data || []);
+      setAdminNotifs(admRes || { pendingForMe: [], myDecisions: [] });
     } catch (err) {
-      console.warn('Failed to fetch reports for notifications:', err);
+      console.warn('Failed to fetch notifications:', err);
     } finally {
       setLoading(false);
     }
@@ -43,7 +57,31 @@ export default function Notifications() {
 
   useEffect(() => {
     loadNotifications();
-  }, [session]);
+  }, [session, isAdmin]);
+
+  const handleRespondRemoval = async (requestId, action) => {
+    setActionLoadingId(requestId);
+    setActionMessage(null);
+    try {
+      const res = await respondToRemovalRequest(requestId, action, '', session?.access_token);
+      if (res.approved || res.selfDemoted) {
+        setActionMessage("Removal approved. Your administrative role has been updated to Citizen.");
+        if (setRole) setRole('user');
+        if (refreshRole) await refreshRole();
+        setTimeout(() => {
+          navigate('/', { replace: true });
+        }, 1200);
+        return;
+      }
+      setActionMessage("Removal request declined. You remain an active administrator.");
+      await loadNotifications();
+    } catch (err) {
+      console.error('Failed to process removal response:', err);
+      setActionMessage(err.message || 'Error processing removal response.');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
 
   const markAllRead = () => {
     const allIds = notificationsList.map((n) => n.id);
@@ -207,6 +245,105 @@ export default function Notifications() {
             </button>
           ))}
         </div>
+
+        {/* Action Message Banner */}
+        {actionMessage && (
+          <div className="rounded-2xl border border-[#F5A623]/40 bg-[#F5A623]/10 p-4 text-xs text-[#F5A623] flex items-center justify-between shadow-sm animate-in fade-in">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 size={16} />
+              <span className="font-semibold">{actionMessage}</span>
+            </div>
+            <button onClick={() => setActionMessage(null)} className="text-[#F5A623] hover:opacity-75">
+              <X size={15} />
+            </button>
+          </div>
+        )}
+
+        {/* URGENT ADMIN NOTIFICATIONS: Two-Person Removal Approval Requests */}
+        {isAdmin && adminNotifs.pendingForMe?.length > 0 && (
+          <div className="space-y-3">
+            {adminNotifs.pendingForMe.map((req) => (
+              <div
+                key={req.id}
+                className="card p-5 rounded-3xl border border-[#EF4444]/60 bg-gradient-to-r from-[#EF4444]/20 via-[#191D20] to-[#EF4444]/10 shadow-2xl space-y-3 animate-in fade-in"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                  <div className="flex items-start gap-3.5">
+                    <div className="grid h-10 w-10 place-items-center rounded-2xl bg-[#EF4444]/25 text-[#EF4444] border border-[#EF4444]/50 shrink-0">
+                      <ShieldAlert size={22} className="animate-pulse" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[#EF4444] bg-[#EF4444]/20 px-2 py-0.5 rounded-full border border-[#EF4444]/40">
+                          ACTION REQUIRED
+                        </span>
+                        <span className="text-xs text-[#A8A8A3]">Two-Person Removal Protocol</span>
+                      </div>
+                      <h3 className="text-base font-black text-[#F5F2ED] mt-1">
+                        Administrator Removal Request Awaiting Your Authorization
+                      </h3>
+                      <p className="text-xs text-[#A8A8A3] mt-1 leading-relaxed">
+                        Administrator <strong className="text-[#F5F2ED] font-mono">{req.requester_email}</strong> has requested the revocation of your administrator privileges. In accordance with the Two-Person Approval policy, you will remain an active Administrator unless you authorize this action.
+                      </p>
+                      {req.reason && (
+                        <div className="mt-2 text-xs p-2.5 rounded-xl bg-[#101417] border border-[#2E363D] text-[#E8C18A] flex items-center gap-2">
+                          <span className="font-bold text-[#A8A8A3]">Reason stated:</span>
+                          <span>&ldquo;{req.reason}&rdquo;</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex sm:flex-col gap-2 shrink-0">
+                    <button
+                      onClick={() => handleRespondRemoval(req.id, 'approve')}
+                      disabled={actionLoadingId === req.id}
+                      className="btn text-xs font-bold py-2 px-4 rounded-xl bg-[#EF4444] text-white hover:bg-[#DC2626] transition shadow-md"
+                    >
+                      {actionLoadingId === req.id ? 'Processing...' : 'Approve Removal'}
+                    </button>
+                    <button
+                      onClick={() => handleRespondRemoval(req.id, 'decline')}
+                      disabled={actionLoadingId === req.id}
+                      className="btn btn-secondary text-xs font-bold py-2 px-4 rounded-xl border-[#2E363D] text-[#F5F2ED] hover:bg-[#22272B] transition"
+                    >
+                      Decline
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ADMIN NOTIFICATIONS: Removal Request Decisions for Requester */}
+        {isAdmin && adminNotifs.myDecisions?.length > 0 && (
+          <div className="space-y-3">
+            {adminNotifs.myDecisions.map((dec) => (
+              <div
+                key={dec.id}
+                className="card p-4 rounded-2xl border border-[#06B6D4]/40 bg-[#06B6D4]/10 space-y-1"
+              >
+                <div className="flex items-center gap-2">
+                  <Crown size={15} className="text-[#06B6D4]" />
+                  <h4 className="text-xs font-bold text-[#F5F2ED]">
+                    Removal Request Decision: <span className="font-mono text-[#06B6D4]">{dec.target_email}</span>
+                  </h4>
+                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                    dec.status === 'approved' ? 'bg-[#10B981]/20 text-[#10B981]' : 'bg-[#EF4444]/20 text-[#EF4444]'
+                  }`}>
+                    {dec.status}
+                  </span>
+                </div>
+                <p className="text-xs text-[#A8A8A3]">
+                  {dec.status === 'approved'
+                    ? `The target administrator approved the request. Administrator privileges have been revoked.`
+                    : `The target administrator declined the removal request. They remain an active administrator.`}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Notifications List */}
         {loading ? (

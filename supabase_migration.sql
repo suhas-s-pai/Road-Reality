@@ -63,16 +63,19 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
   v_role TEXT := 'user';
+  v_admin_name TEXT := NULL;
 BEGIN
-  -- If this email has a pending admin invitation, grant admin role immediately
+  -- If this email has a pending admin invitation, grant admin role and use designated admin invitation name
   IF EXISTS (
     SELECT 1 FROM information_schema.tables 
     WHERE table_schema = 'public' AND table_name = 'admin_invitations'
   ) THEN
-    IF EXISTS (
-      SELECT 1 FROM public.admin_invitations 
-      WHERE lower(email) = lower(NEW.email) AND status = 'pending'
-    ) THEN
+    SELECT full_name INTO v_admin_name
+    FROM public.admin_invitations 
+    WHERE lower(email) = lower(NEW.email) AND status = 'pending'
+    LIMIT 1;
+
+    IF v_admin_name IS NOT NULL THEN
       v_role := 'admin';
       UPDATE public.admin_invitations
       SET status = 'accepted', updated_at = timezone('utc'::text, now())
@@ -80,21 +83,22 @@ BEGIN
     END IF;
   END IF;
 
+  -- Minimal account data: ordinary users do NOT have Google display names copied
   INSERT INTO public.profiles (id, email, name, full_name, avatar_url, role)
   VALUES (
     NEW.id,
     NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
-    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
-    COALESCE(NEW.raw_user_meta_data->>'avatar_url', ''),
+    CASE WHEN v_role = 'admin' THEN COALESCE(v_admin_name, 'Administrator') ELSE NULL END,
+    CASE WHEN v_role = 'admin' THEN COALESCE(v_admin_name, 'Administrator') ELSE NULL END,
+    NULL,
     v_role
   )
   ON CONFLICT (id) DO UPDATE
   SET
     email = EXCLUDED.email,
-    name = COALESCE(public.profiles.name, EXCLUDED.name),
-    full_name = COALESCE(public.profiles.full_name, EXCLUDED.full_name),
-    avatar_url = COALESCE(public.profiles.avatar_url, EXCLUDED.avatar_url),
+    name = CASE WHEN public.profiles.role = 'admin' OR v_role = 'admin' THEN COALESCE(public.profiles.name, v_admin_name, 'Administrator') ELSE NULL END,
+    full_name = CASE WHEN public.profiles.role = 'admin' OR v_role = 'admin' THEN COALESCE(public.profiles.full_name, v_admin_name, 'Administrator') ELSE NULL END,
+    avatar_url = CASE WHEN public.profiles.role = 'admin' OR v_role = 'admin' THEN public.profiles.avatar_url ELSE NULL END,
     role = CASE WHEN public.profiles.role = 'admin' OR v_role = 'admin' THEN 'admin' ELSE public.profiles.role END,
     updated_at = timezone('utc'::text, now());
   RETURN NEW;
@@ -371,29 +375,97 @@ CREATE POLICY "Admins can insert audit logs"
     )
   );
 
+-- 6.3 Admin Removal Requests (Two-person approval workflow)
+CREATE TABLE IF NOT EXISTS public.admin_removal_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  requester_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  requester_email TEXT NOT NULL,
+  requester_name TEXT,
+  target_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  target_email TEXT NOT NULL,
+  target_name TEXT,
+  reason TEXT,
+  status TEXT NOT NULL DEFAULT 'awaiting_approval' CHECK (status IN ('awaiting_approval', 'approved', 'declined', 'cancelled')),
+  decision_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  decision_at TIMESTAMPTZ,
+  decision_note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+ALTER TABLE public.admin_removal_requests ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admins can view removal requests" ON public.admin_removal_requests;
+CREATE POLICY "Admins can view removal requests"
+  ON public.admin_removal_requests FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
+    )
+    OR lower(target_email) = lower(auth.jwt() ->> 'email')
+    OR lower(requester_email) = lower(auth.jwt() ->> 'email')
+  );
+
+DROP POLICY IF EXISTS "Admins can insert removal requests" ON public.admin_removal_requests;
+CREATE POLICY "Admins can insert removal requests"
+  ON public.admin_removal_requests FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
+    )
+  );
+
+DROP POLICY IF EXISTS "Target admin or requester can update removal requests" ON public.admin_removal_requests;
+CREATE POLICY "Target admin or requester can update removal requests"
+  ON public.admin_removal_requests FOR UPDATE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
+    )
+    OR lower(target_email) = lower(auth.jwt() ->> 'email')
+    OR lower(requester_email) = lower(auth.jwt() ->> 'email')
+  );
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_admin_invitations_email ON public.admin_invitations(lower(email));
 CREATE INDEX IF NOT EXISTS idx_admin_invitations_status ON public.admin_invitations(status);
 CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_created_at ON public.admin_audit_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_admin_removal_requests_target ON public.admin_removal_requests(lower(target_email));
+CREATE INDEX IF NOT EXISTS idx_admin_removal_requests_status ON public.admin_removal_requests(status);
 
 -- ==============================================================================
 -- 7. PROMOTE PRIMARY ADMINISTRATOR ACCOUNT (suhaspai13@gmail.com)
 -- ==============================================================================
 -- This promotes suhaspai13@gmail.com to administrator role if the user already exists.
 UPDATE public.profiles
-SET role = 'admin', updated_at = timezone('utc'::text, now())
+SET role = 'admin', name = 'Suhas S Pai', full_name = 'Suhas S Pai', updated_at = timezone('utc'::text, now())
 WHERE id = (SELECT id FROM auth.users WHERE email = 'suhaspai13@gmail.com' LIMIT 1);
 
 -- Also update by email on profiles table if already synced:
 UPDATE public.profiles
-SET role = 'admin', updated_at = timezone('utc'::text, now())
+SET role = 'admin', name = 'Suhas S Pai', full_name = 'Suhas S Pai', updated_at = timezone('utc'::text, now())
 WHERE email = 'suhaspai13@gmail.com';
 
 -- ==============================================================================
--- 8. VERIFICATION QUERY
+-- 8. PRIVACY SANITIZATION: REMOVE PUBLIC NAMES FOR ORDINARY CITIZENS
+-- ==============================================================================
+-- Clear public Google profile names from non-admin profiles
+UPDATE public.profiles
+SET name = NULL, full_name = NULL, avatar_url = NULL
+WHERE role = 'user';
+
+-- ==============================================================================
+-- 9. VERIFICATION QUERY
 -- ==============================================================================
 SELECT 'Road Reality migration completed successfully!' AS status,
        (SELECT count(*) FROM public.hazard_reports) AS total_hazard_reports,
        (SELECT count(*) FROM public.profiles) AS total_profiles,
        (SELECT count(*) FROM public.profiles WHERE role = 'admin') AS total_admins,
-       (SELECT count(*) FROM public.admin_invitations) AS total_invitations;
+       (SELECT count(*) FROM public.admin_invitations) AS total_invitations,
+       (SELECT count(*) FROM public.admin_removal_requests) AS total_removal_requests;

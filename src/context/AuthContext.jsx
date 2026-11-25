@@ -32,40 +32,49 @@ async function syncUserProfile(user, token) {
   const avatarUrl = user.user_metadata?.avatar_url || '';
 
   try {
-    // 1. Direct Supabase sync if configured
+    // 1. Direct Supabase sync if configured (minimal account data collection)
     const { data: existingProfile } = await supabase
       .from('profiles')
-      .select('id, role')
+      .select('id, role, name, full_name')
       .eq('id', user.id)
       .maybeSingle();
 
+    const isExistingAdmin = existingProfile?.role === 'admin';
+
     if (!existingProfile) {
+      // Ordinary users: Do NOT copy Google public display names. Keep minimal account data.
       const { error: insertErr } = await supabase
         .from('profiles')
         .insert({
           id: user.id,
           email: user.email,
-          name: fullName,
-          full_name: fullName,
-          avatar_url: avatarUrl,
+          name: null,
+          full_name: null,
+          avatar_url: null,
           role: 'user'
         });
       if (insertErr) console.warn('[Auth] Supabase profile insert notice:', insertErr.message);
-      else console.log('[Auth] New profile created for:', user.email);
+      else console.log('[Auth] New minimal profile created for:', user.email);
     } else {
-      // Profile exists: NEVER update the 'role' column during client profile sync
+      // Profile exists: update email and timestamps. Never copy Google display name for ordinary users.
+      const updateData = {
+        email: user.email,
+        updated_at: new Date().toISOString()
+      };
+      if (isExistingAdmin) {
+        updateData.name = existingProfile.name || existingProfile.full_name || 'Administrator';
+        updateData.full_name = existingProfile.full_name || existingProfile.name || 'Administrator';
+      } else {
+        updateData.name = null;
+        updateData.full_name = null;
+        updateData.avatar_url = null;
+      }
+
       const { error: updateErr } = await supabase
         .from('profiles')
-        .update({
-          email: user.email,
-          name: fullName,
-          full_name: fullName,
-          avatar_url: avatarUrl,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', user.id);
       if (updateErr) console.warn('[Auth] Supabase profile update notice:', updateErr.message);
-      else console.log('[Auth] Profile synced (role preserved:', existingProfile.role, ') for:', user.email);
     }
 
     // 2. Also notify backend sync-profile if token is available

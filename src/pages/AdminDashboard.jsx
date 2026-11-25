@@ -33,6 +33,7 @@ import {
   Layers,
   ArrowRight,
   UserPlus,
+  UserMinus,
   Send,
   Key,
   ShieldCheck,
@@ -50,7 +51,11 @@ import {
   getAdminManagementData,
   addAdminAccount,
   removeAdminAccount,
-  cancelAdminInvitation
+  cancelAdminInvitation,
+  requestAdminRemoval,
+  respondToRemovalRequest,
+  cancelRemovalRequest,
+  getAdminNotifications
 } from '../services/hazardService';
 import { Badge } from '../components/Badges';
 
@@ -88,11 +93,13 @@ export default function AdminDashboard() {
   // Admin Access & Management State
   const [adminsList, setAdminsList] = useState([]);
   const [invitationsList, setInvitationsList] = useState([]);
+  const [removalRequestsList, setRemovalRequestsList] = useState([]);
   const [auditLogsList, setAuditLogsList] = useState([]);
   const [newAdminEmail, setNewAdminEmail] = useState('');
   const [newAdminName, setNewAdminName] = useState('');
   const [isAddingAdmin, setIsAddingAdmin] = useState(false);
-  const [confirmRemovalModal, setConfirmRemovalModal] = useState({ open: false, target: null, isSelfDemotion: false });
+  const [requestRemovalModal, setRequestRemovalModal] = useState({ open: false, target: null, reason: '' });
+  const [pendingMyApprovals, setPendingMyApprovals] = useState([]);
 
   // Filters & search
   const [searchQuery, setSearchQuery] = useState('');
@@ -113,7 +120,7 @@ export default function AdminDashboard() {
   const [errorMessage, setErrorMessage] = useState(null);
   const [copiedSql, setCopiedSql] = useState(false);
 
-  // Load admin management dataset (admins, invitations, audit logs)
+  // Load admin management dataset (admins, invitations, removal requests, audit logs)
   const loadAdminManagementData = async () => {
     if (!session?.access_token) return;
     try {
@@ -121,7 +128,18 @@ export default function AdminDashboard() {
       if (data && data.success) {
         setAdminsList(data.admins || []);
         setInvitationsList(data.invitations || []);
+        setRemovalRequestsList(data.removalRequests || []);
         setAuditLogsList(data.auditLogs || []);
+
+        const myEmail = (currentUser?.email || '').toLowerCase().trim();
+        const myId = currentUser?.id;
+        const pendingForMe = (data.removalRequests || []).filter(
+          (r) =>
+            r.status === 'awaiting_approval' &&
+            ((r.target_id && myId && r.target_id === myId) ||
+              (r.target_email && r.target_email.toLowerCase() === myEmail))
+        );
+        setPendingMyApprovals(pendingForMe);
       }
     } catch (err) {
       console.warn('Failed to load admin management data:', err.message);
@@ -291,52 +309,111 @@ export default function AdminDashboard() {
     }
   };
 
-  // Open confirmation modal for removing an admin
-  const handleInitiateRemoveAdmin = (admin) => {
+  // Open confirmation dialog to request removal of another administrator
+  const handleOpenRequestRemoval = (admin) => {
     if (adminsList.length <= 1) {
-      setErrorMessage("Action blocked: Road Reality requires at least one active administrator. Please promote or add another administrator first.");
+      setErrorMessage("Action blocked: Road Reality requires at least one active administrator. You cannot remove the only remaining administrator.");
       return;
     }
 
+    const myEmail = (currentUser?.email || '').toLowerCase().trim();
+    const myId = currentUser?.id;
     const isSelf = Boolean(
-      (currentUser?.id && admin.id && currentUser.id === admin.id) ||
-      (currentUser?.email && admin.email && currentUser.email.toLowerCase() === admin.email.toLowerCase())
+      (myId && admin.id && myId === admin.id) ||
+      (myEmail && admin.email && myEmail === admin.email.toLowerCase().trim())
     );
 
-    setConfirmRemovalModal({
+    if (isSelf) {
+      setErrorMessage("You cannot request removal of yourself. Another administrator must initiate the removal request.");
+      return;
+    }
+
+    // Check duplicate pending request
+    const duplicate = (removalRequestsList || []).some(
+      (r) =>
+        (r.target_email || '').toLowerCase() === (admin.email || '').toLowerCase() &&
+        r.status === 'awaiting_approval'
+    );
+    if (duplicate) {
+      setErrorMessage(`A removal request is already awaiting approval for ${admin.email}.`);
+      return;
+    }
+
+    setRequestRemovalModal({
       open: true,
       target: admin,
-      isSelfDemotion: isSelf
+      reason: ''
     });
   };
 
-  // Execute confirmed removal of an administrator
-  const handleConfirmRemoveAdmin = async () => {
-    if (!confirmRemovalModal.target) return;
-    const target = confirmRemovalModal.target;
-    const isSelf = confirmRemovalModal.isSelfDemotion;
+  // Submit the formal removal request
+  const handleSubmitRemovalRequest = async (e) => {
+    if (e) e.preventDefault();
+    if (!requestRemovalModal.target) return;
 
-    setConfirmRemovalModal({ open: false, target: null, isSelfDemotion: false });
-    setActionLoadingId(target.id);
+    setActionLoadingId(requestRemovalModal.target.id);
     setStatusMessage(null);
     setErrorMessage(null);
 
     try {
-      const res = await removeAdminAccount({ id: target.id, email: target.email }, session?.access_token);
+      const res = await requestAdminRemoval(
+        {
+          targetId: requestRemovalModal.target.id,
+          targetEmail: requestRemovalModal.target.email,
+          reason: requestRemovalModal.reason
+        },
+        session?.access_token
+      );
+      setStatusMessage(res.message || "Removal request submitted. Notification sent to target administrator.");
+      setRequestRemovalModal({ open: false, target: null, reason: '' });
+      await Promise.all([loadAdminManagementData(), loadPortalData()]);
+    } catch (err) {
+      console.error("Submit removal request error:", err);
+      setErrorMessage(err.message || "Failed to submit removal request.");
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
 
-      if (res.selfDemoted || isSelf) {
-        setStatusMessage(res.message || "You have removed your admin privileges.");
+  // Target administrator responds to removal request (Approve or Decline)
+  const handleRespondRemoval = async (requestId, action) => {
+    setActionLoadingId(requestId);
+    setStatusMessage(null);
+    setErrorMessage(null);
+
+    try {
+      const res = await respondToRemovalRequest(requestId, action, '', session?.access_token);
+
+      if (res.approved || res.selfDemoted) {
+        setStatusMessage(res.message || "You have approved your removal. Your administrator privileges have been revoked.");
         if (setRole) setRole('user');
         if (refreshRole) await refreshRole();
         navigate('/', { replace: true });
         return;
       }
 
-      setStatusMessage(res.message || `Administrator ${target.email} removed.`);
+      setStatusMessage(res.message || "Removal request declined. You remain an active administrator.");
       await Promise.all([loadAdminManagementData(), loadPortalData()]);
     } catch (err) {
-      console.error("Remove admin error:", err);
-      setErrorMessage(err.message || "Failed to remove administrator.");
+      console.error("Respond removal error:", err);
+      setErrorMessage(err.message || "Failed to process removal response.");
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // Cancel an open removal request
+  const handleCancelRemovalRequest = async (requestId) => {
+    setActionLoadingId(requestId);
+    setStatusMessage(null);
+    setErrorMessage(null);
+
+    try {
+      const res = await cancelRemovalRequest(requestId, session?.access_token);
+      setStatusMessage(res.message || "Removal request cancelled.");
+      await loadAdminManagementData();
+    } catch (err) {
+      setErrorMessage(err.message || "Failed to cancel removal request.");
     } finally {
       setActionLoadingId(null);
     }
@@ -353,36 +430,6 @@ export default function AdminDashboard() {
       await loadAdminManagementData();
     } catch (err) {
       setErrorMessage(err.message || "Failed to cancel invitation.");
-    } finally {
-      setActionLoadingId(null);
-    }
-  };
-
-  // Promote or demote user role from Users tab
-  const handleRoleChange = async (targetUserId, newRole) => {
-    if (newRole === 'user') {
-      const targetUser = usersList.find((u) => u.id === targetUserId);
-      if (targetUser) {
-        handleInitiateRemoveAdmin(targetUser);
-        return;
-      }
-    }
-
-    setActionLoadingId(targetUserId);
-    setStatusMessage(null);
-    setErrorMessage(null);
-    try {
-      const res = await updateUserRole(targetUserId, newRole, session?.access_token);
-      setStatusMessage(res.message || `User role updated to '${newRole}'.`);
-
-      setUsersList((prev) =>
-        prev.map((u) => (u.id === targetUserId ? { ...u, role: newRole } : u))
-      );
-
-      await Promise.all([loadAdminManagementData(), loadPortalData()]);
-    } catch (err) {
-      console.error('Role update error:', err);
-      setErrorMessage(err.message || 'Failed to update user role.');
     } finally {
       setActionLoadingId(null);
     }
@@ -630,7 +677,13 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
             {[
               { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
               { id: 'reports', label: `All Reports (${reportsList.length})`, icon: ShieldAlert },
-              { id: 'adminManagement', label: `Admin Access (${adminsList.length})`, icon: Crown },
+              {
+                id: 'adminManagement',
+                label: 'Admin Management',
+                icon: Crown,
+                badge: pendingMyApprovals.length > 0 ? `${pendingMyApprovals.length} Pending` : null,
+                badgeColor: 'bg-[#EF4444] text-white shadow-sm animate-pulse'
+              },
               { id: 'users', label: `Users (${usersList.length})`, icon: Users },
               { id: 'assignments', label: 'Assignments', icon: Briefcase },
               { id: 'analytics', label: 'Analytics', icon: BarChart3 },
@@ -645,14 +698,21 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
                     setActiveTab(item.id);
                     setSearchQuery('');
                   }}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition text-left ${
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition text-left ${
                     isActive
                       ? 'bg-[#22272B] text-[#F5A623] border border-[#F5A623]/40 shadow-sm'
                       : 'text-[#A8A8A3] hover:bg-[#22272B] hover:text-[#F5F2ED]'
                   }`}
                 >
-                  <Icon size={16} className={isActive ? 'text-[#F5A623]' : 'text-[#A8A8A3]'} />
-                  <span>{item.label}</span>
+                  <div className="flex items-center gap-2.5">
+                    <Icon size={16} className={isActive ? 'text-[#F5A623]' : 'text-[#A8A8A3]'} />
+                    <span>{item.label}</span>
+                  </div>
+                  {item.badge && (
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${item.badgeColor || 'bg-[#F5A623] text-[#101417]'}`}>
+                      {item.badge}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -661,6 +721,56 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
 
         {/* Right Content Pane */}
         <div className="lg:col-span-4 space-y-6">
+          {/* URGENT ACTION: Pending Removal Approvals for the logged-in administrator */}
+          {pendingMyApprovals.length > 0 && (
+            <div className="rounded-3xl border border-[#EF4444]/60 bg-gradient-to-r from-[#EF4444]/20 via-[#191D20] to-[#EF4444]/10 p-5 shadow-2xl space-y-3 animate-in fade-in">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                <div className="flex items-start gap-3.5">
+                  <div className="grid h-11 w-11 place-items-center rounded-2xl bg-[#EF4444]/25 text-[#EF4444] border border-[#EF4444]/50 shrink-0">
+                    <AlertCircle size={24} className="animate-pulse" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-[#EF4444] bg-[#EF4444]/20 px-2 py-0.5 rounded-full border border-[#EF4444]/40">
+                        ACTION REQUIRED
+                      </span>
+                      <span className="text-xs text-[#A8A8A3]">Two-Person Removal Protocol</span>
+                    </div>
+                    <h3 className="text-base font-black text-[#F5F2ED]">
+                      Administrator Removal Request Awaiting Your Authorization
+                    </h3>
+                    <p className="text-xs text-[#A8A8A3] max-w-2xl leading-relaxed">
+                      Administrator <strong className="text-[#F5F2ED] font-mono">{pendingMyApprovals[0].requester_email}</strong> has submitted a request to remove your administrator privileges. Under the Road Reality Two-Person Approval policy, you cannot be unilaterally removed. Your privileges will remain active unless you personally approve this request.
+                    </p>
+                    {pendingMyApprovals[0].reason && (
+                      <div className="mt-2 text-xs p-2.5 rounded-xl bg-[#101417] border border-[#2E363D] text-[#E8C18A] flex items-center gap-2">
+                        <span className="font-bold text-[#A8A8A3]">Reason stated:</span>
+                        <span>&ldquo;{pendingMyApprovals[0].reason}&rdquo;</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex sm:flex-col gap-2 shrink-0">
+                  <button
+                    onClick={() => handleRespondRemoval(pendingMyApprovals[0].id, 'approve')}
+                    disabled={actionLoadingId === pendingMyApprovals[0].id}
+                    className="btn text-xs font-bold py-2 px-4 rounded-xl bg-[#EF4444] text-white hover:bg-[#DC2626] transition shadow-md"
+                  >
+                    {actionLoadingId === pendingMyApprovals[0].id ? 'Processing...' : 'Approve Removal'}
+                  </button>
+                  <button
+                    onClick={() => handleRespondRemoval(pendingMyApprovals[0].id, 'decline')}
+                    disabled={actionLoadingId === pendingMyApprovals[0].id}
+                    className="btn btn-secondary text-xs font-bold py-2 px-4 rounded-xl border-[#2E363D] text-[#F5F2ED] hover:bg-[#22272B] transition"
+                  >
+                    Decline Request
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Notification / Toast messages */}
           {statusMessage && (
             <div className="rounded-2xl border border-[#10B981]/30 bg-[#10B981]/10 p-3.5 text-xs text-[#10B981] flex items-center justify-between shadow-sm animate-in fade-in">
@@ -1230,24 +1340,192 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
                               </td>
 
                               <td className="px-4 py-3.5 text-right">
-                                <button
-                                  onClick={() => handleInitiateRemoveAdmin(admin)}
-                                  disabled={isOnlyAdmin || actionLoadingId === admin.id}
-                                  title={isOnlyAdmin ? 'Cannot remove the last remaining administrator' : 'Remove administrator role'}
-                                  className={`btn text-xs py-1 px-3 border transition ${
-                                    isOnlyAdmin
-                                      ? 'opacity-40 cursor-not-allowed border-[#2E363D] text-[#A8A8A3]'
-                                      : isCurrentUser
-                                      ? 'border-[#EF4444]/40 text-[#EF4444] hover:bg-[#EF4444]/15'
-                                      : 'border-[#2E363D] text-[#EF4444] hover:bg-[#EF4444]/15'
-                                  }`}
-                                >
-                                  {isOnlyAdmin
-                                    ? 'Sole Admin (Protected)'
-                                    : isCurrentUser
-                                    ? 'Step Down / Remove Role'
-                                    : 'Remove Admin'}
-                                </button>
+                                {isOnlyAdmin ? (
+                                  <span className="text-[11px] text-[#A8A8A3] italic">
+                                    Sole Admin (Protected)
+                                  </span>
+                                ) : isCurrentUser ? (
+                                  <span className="text-[11px] text-[#A8A8A3] italic">
+                                    Current Admin
+                                  </span>
+                                ) : (
+                                  <button
+                                    onClick={() => handleOpenRequestRemoval(admin)}
+                                    disabled={
+                                      actionLoadingId === admin.id ||
+                                      (removalRequestsList || []).some(
+                                        (r) =>
+                                          (r.target_email || '').toLowerCase() === (admin.email || '').toLowerCase() &&
+                                          r.status === 'awaiting_approval'
+                                      )
+                                    }
+                                    title="Initiate two-person removal request"
+                                    className="btn text-xs py-1 px-3 border border-[#EF4444]/40 text-[#EF4444] hover:bg-[#EF4444]/15 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                  >
+                                    {(removalRequestsList || []).some(
+                                      (r) =>
+                                        (r.target_email || '').toLowerCase() === (admin.email || '').toLowerCase() &&
+                                        r.status === 'awaiting_approval'
+                                    )
+                                      ? 'Pending Approval'
+                                      : 'Request Removal'}
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Two-Person Removal Requests Table */}
+              <div className="card bg-[#191D20] border-[#2E363D] rounded-3xl overflow-hidden shadow-2xl">
+                <div className="p-5 border-b border-[#2E363D] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-base font-black text-[#F5F2ED] font-display flex items-center gap-2">
+                      <ShieldAlert size={16} className="text-[#EF4444]" />
+                      <span>Two-Person Removal Requests ({removalRequestsList.length})</span>
+                    </h3>
+                    <p className="text-xs text-[#A8A8A3]">
+                      Road Reality enforces a two-person removal rule. A removal request must be authorized by the target administrator before privileges are revoked.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-[#E8C18A] bg-[#E8C18A]/15 border border-[#E8C18A]/30 px-2.5 py-1 rounded-full">
+                      Two-Person Approval Required
+                    </span>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-[#101417] text-[10px] font-black uppercase tracking-wider text-[#A8A8A3] border-b border-[#2E363D]">
+                      <tr>
+                        <th className="px-4 py-3.5">Target Administrator</th>
+                        <th className="px-4 py-3.5">Requested By</th>
+                        <th className="px-4 py-3.5">Date Requested</th>
+                        <th className="px-4 py-3.5">Reason / Note</th>
+                        <th className="px-4 py-3.5">Status</th>
+                        <th className="px-4 py-3.5 text-right">Action / Result</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#2E363D]">
+                      {removalRequestsList.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="px-4 py-8 text-center text-[#A8A8A3]">
+                            No removal requests recorded. Active administrators cannot be unilaterally removed.
+                          </td>
+                        </tr>
+                      ) : (
+                        removalRequestsList.map((req) => {
+                          const myEmail = (currentUser?.email || '').toLowerCase().trim();
+                          const myId = currentUser?.id;
+                          const isTarget = Boolean(
+                            (myId && req.target_id && myId === req.target_id) ||
+                            (myEmail && req.target_email && myEmail === req.target_email.toLowerCase().trim())
+                          );
+                          const isRequester = Boolean(
+                            (myId && req.requester_id && myId === req.requester_id) ||
+                            (myEmail && req.requester_email && myEmail === req.requester_email.toLowerCase().trim())
+                          );
+
+                          return (
+                            <tr key={req.id} className="hover:bg-[#22272B] transition">
+                              <td className="px-4 py-3.5 font-bold text-[#F5F2ED]">
+                                <div>
+                                  <span>{req.target_name || req.target_email?.split('@')[0] || 'Administrator'}</span>
+                                  <span className="block font-mono text-[11px] text-[#E8C18A] font-normal">
+                                    {req.target_email}
+                                  </span>
+                                </div>
+                              </td>
+
+                              <td className="px-4 py-3.5 text-[#A8A8A3] text-[11px]">
+                                <span className="font-semibold text-[#F5F2ED]">{req.requester_email}</span>
+                                {isRequester && (
+                                  <span className="ml-1 text-[10px] text-[#06B6D4] font-bold">(You)</span>
+                                )}
+                              </td>
+
+                              <td className="px-4 py-3.5 font-mono text-[#A8A8A3] text-[11px]">
+                                {req.created_at ? new Date(req.created_at).toLocaleDateString() : 'Recent'}
+                              </td>
+
+                              <td className="px-4 py-3.5 text-[#A8A8A3] max-w-[200px] truncate text-[11px]">
+                                {req.reason || <span className="italic text-[#6B7280]">No reason specified</span>}
+                              </td>
+
+                              <td className="px-4 py-3.5">
+                                {req.status === 'awaiting_approval' && (
+                                  <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold bg-[#F5A623]/15 text-[#F5A623] border border-[#F5A623]/30">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-[#F5A623] animate-pulse" />
+                                    Awaiting Approval
+                                  </span>
+                                )}
+                                {req.status === 'approved' && (
+                                  <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30">
+                                    <CheckCircle2 size={11} />
+                                    Approved & Removed
+                                  </span>
+                                )}
+                                {req.status === 'declined' && (
+                                  <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold bg-[#EF4444]/15 text-[#EF4444] border border-[#EF4444]/30">
+                                    <X size={11} />
+                                    Declined by Target
+                                  </span>
+                                )}
+                                {req.status === 'cancelled' && (
+                                  <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold bg-[#22272B] text-[#A8A8A3] border border-[#2E363D]">
+                                    Cancelled
+                                  </span>
+                                )}
+                              </td>
+
+                              <td className="px-4 py-3.5 text-right">
+                                {req.status === 'awaiting_approval' ? (
+                                  isTarget ? (
+                                    <div className="flex items-center justify-end gap-2">
+                                      <button
+                                        onClick={() => handleRespondRemoval(req.id, 'approve')}
+                                        disabled={actionLoadingId === req.id}
+                                        className="btn text-xs py-1 px-2.5 rounded-lg bg-[#EF4444] text-white hover:bg-[#DC2626] transition font-bold shadow-sm"
+                                      >
+                                        Approve
+                                      </button>
+                                      <button
+                                        onClick={() => handleRespondRemoval(req.id, 'decline')}
+                                        disabled={actionLoadingId === req.id}
+                                        className="btn btn-secondary text-xs py-1 px-2.5 border-[#2E363D] text-[#F5F2ED] hover:bg-[#22272B] transition"
+                                      >
+                                        Decline
+                                      </button>
+                                    </div>
+                                  ) : isRequester ? (
+                                    <button
+                                      onClick={() => handleCancelRemovalRequest(req.id)}
+                                      disabled={actionLoadingId === req.id}
+                                      className="btn btn-secondary text-xs py-1 px-3 border-[#2E363D] text-[#EF4444] hover:bg-[#EF4444]/15"
+                                    >
+                                      Cancel Request
+                                    </button>
+                                  ) : (
+                                    <span className="text-[11px] text-[#A8A8A3] italic">
+                                      Pending Target
+                                    </span>
+                                  )
+                                ) : (
+                                  <span className="text-[11px] text-[#A8A8A3] font-mono">
+                                    {req.status === 'approved'
+                                      ? 'Removed'
+                                      : req.status === 'declined'
+                                      ? 'Remains Admin'
+                                      : 'Void'}
+                                  </span>
+                                )}
                               </td>
                             </tr>
                           );
@@ -1380,11 +1658,20 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
           {/* ==================================================================== */}
           {activeTab === 'users' && (
             <div className="card bg-[#191D20] border-[#2E363D] rounded-3xl overflow-hidden shadow-2xl">
-              <div className="p-5 border-b border-[#2E363D] flex items-center justify-between">
+              <div className="p-5 border-b border-[#2E363D] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <h2 className="text-base font-black text-[#F5F2ED] font-display">Registered Users Roster</h2>
-                  <p className="text-xs text-[#A8A8A3]">Manage citizen accounts and staff administrative privileges</p>
+                  <p className="text-xs text-[#A8A8A3]">
+                    Citizen accounts with minimal data collection. Administrative roles and invitations are managed exclusively in the dedicated Admin Management console.
+                  </p>
                 </div>
+                <button
+                  onClick={() => setActiveTab('adminManagement')}
+                  className="btn btn-secondary text-xs py-1.5 px-3 border-[#2E363D] text-[#F5A623] hover:border-[#F5A623] self-start sm:self-auto"
+                >
+                  <Crown size={14} className="mr-1.5 text-[#F5A623]" />
+                  <span>Admin Management Console</span>
+                </button>
               </div>
 
               <div className="overflow-x-auto">
@@ -1392,60 +1679,55 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
                   <thead className="bg-[#101417] text-[10px] font-black uppercase tracking-wider text-[#A8A8A3] border-b border-[#2E363D]">
                     <tr>
                       <th className="px-4 py-3.5">User</th>
-                      <th className="px-4 py-3.5">Email</th>
+                      <th className="px-4 py-3.5">Verified Email</th>
                       <th className="px-4 py-3.5">Reports Logged</th>
                       <th className="px-4 py-3.5">Role</th>
-                      <th className="px-4 py-3.5 text-right">Actions</th>
+                      <th className="px-4 py-3.5 text-right">Access Controls</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#2E363D]">
-                    {filteredUsers.map((u) => (
-                      <tr key={u.id} className="hover:bg-[#22272B] transition">
-                        <td className="px-4 py-3.5 font-bold text-[#F5F2ED] flex items-center gap-2.5">
-                          <div className="grid h-7 w-7 place-items-center rounded-full bg-[#22272B] border border-[#2E363D] text-[#F5A623] font-bold text-xs">
-                            {u.name[0]?.toUpperCase()}
-                          </div>
-                          <span>{u.name}</span>
-                        </td>
-                        <td className="px-4 py-3.5 font-mono text-[#A8A8A3]">{u.email}</td>
-                        <td className="px-4 py-3.5 font-bold text-[#F5F2ED]">{u.reportCount || 0}</td>
-                        <td className="px-4 py-3.5">
-                          <span
-                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
-                              u.role === 'admin'
-                                ? 'bg-[#F5A623]/15 text-[#F5A623] border border-[#F5A623]/30'
-                                : 'bg-[#101417] text-[#A8A8A3] border border-[#2E363D]'
-                            }`}
-                          >
-                            {u.role === 'admin' ? 'Administrator' : 'Citizen'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 text-right">
-                          {u.role === 'admin' ? (
-                            <button
-                              onClick={() => handleInitiateRemoveAdmin(u)}
-                              disabled={adminsList.length <= 1 || actionLoadingId === u.id}
-                              title={adminsList.length <= 1 ? "Cannot remove the only remaining administrator" : "Revoke administrator role"}
-                              className={`btn text-xs py-1 px-3 border transition ${
-                                adminsList.length <= 1
-                                  ? 'opacity-40 cursor-not-allowed border-[#2E363D] text-[#A8A8A3]'
-                                  : 'border-[#2E363D] text-[#EF4444] hover:bg-[#EF4444]/15'
+                    {filteredUsers.map((u) => {
+                      const isCitizen = u.role !== 'admin';
+                      const displayName = isCitizen ? 'Citizen' : (u.name || u.full_name || 'Administrator');
+
+                      return (
+                        <tr key={u.id} className="hover:bg-[#22272B] transition">
+                          <td className="px-4 py-3.5 font-bold text-[#F5F2ED] flex items-center gap-2.5">
+                            <div className="grid h-7 w-7 place-items-center rounded-full bg-[#22272B] border border-[#2E363D] text-[#F5A623] font-bold text-xs">
+                              {displayName[0]?.toUpperCase() || 'C'}
+                            </div>
+                            <span>{displayName}</span>
+                          </td>
+                          <td className="px-4 py-3.5 font-mono text-[#A8A8A3]">{u.email}</td>
+                          <td className="px-4 py-3.5 font-bold text-[#F5F2ED]">{u.reportCount || 0}</td>
+                          <td className="px-4 py-3.5">
+                            <span
+                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                                u.role === 'admin'
+                                  ? 'bg-[#F5A623]/15 text-[#F5A623] border border-[#F5A623]/30'
+                                  : 'bg-[#101417] text-[#A8A8A3] border border-[#2E363D]'
                               }`}
                             >
-                              {adminsList.length <= 1 ? 'Sole Admin' : 'Revoke Admin'}
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleRoleChange(u.id, 'admin')}
-                              disabled={actionLoadingId === u.id}
-                              className="btn btn-secondary text-xs py-1 px-3 border-[#2E363D] text-[#F5A623] hover:border-[#F5A623] hover:bg-[#F5A623]/10"
-                            >
-                              Make Admin
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                              {u.role === 'admin' ? 'Administrator' : 'Citizen'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5 text-right">
+                            {u.role === 'admin' ? (
+                              <button
+                                onClick={() => setActiveTab('adminManagement')}
+                                className="text-xs text-[#F5A623] hover:underline font-semibold"
+                              >
+                                View in Admin Management &rarr;
+                              </button>
+                            ) : (
+                              <span className="text-[11px] text-[#A8A8A3] font-mono">
+                                Citizen Account
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1678,9 +1960,9 @@ WHERE id = (SELECT id FROM auth.users WHERE email = 'suhaspai13@gmail.com' LIMIT
       )}
 
       {/* ==================================================================== */}
-      {/* CONFIRMATION MODAL FOR ADMIN REMOVAL / ROLE TRANSFER */}
+      {/* CONFIRMATION MODAL FOR INITIATING TWO-PERSON ADMIN REMOVAL */}
       {/* ==================================================================== */}
-      {confirmRemovalModal.open && (
+      {requestRemovalModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#101417]/85 backdrop-blur-sm animate-in fade-in">
           <div className="relative w-full max-w-md rounded-3xl border border-[#EF4444]/40 bg-[#191D20] p-6 shadow-2xl space-y-4 text-xs text-[#F5F2ED]">
             <div className="flex items-center gap-3 border-b border-[#2E363D] pb-3 text-[#EF4444]">
@@ -1689,41 +1971,49 @@ WHERE id = (SELECT id FROM auth.users WHERE email = 'suhaspai13@gmail.com' LIMIT
               </div>
               <div>
                 <h3 className="text-base font-black text-[#F5F2ED] font-display">
-                  {confirmRemovalModal.isSelfDemotion ? 'Confirm Role Transfer / Self-Demotion' : 'Revoke Administrator Access'}
+                  Initiate Administrator Removal Request
                 </h3>
-                <p className="text-[11px] text-[#A8A8A3]">Administrative Security Authorization</p>
+                <p className="text-[11px] text-[#A8A8A3]">Two-Person Approval Protocol</p>
               </div>
             </div>
 
             <div className="p-4 rounded-2xl bg-[#22272B] border border-[#2E363D] text-[#A8A8A3] leading-relaxed text-[11px] space-y-2">
-              {confirmRemovalModal.isSelfDemotion ? (
-                <>
-                  <p className="text-[#EF4444] font-bold">
-                    Warning: You are about to step down and remove your own administrator privileges.
-                  </p>
-                  <p>
-                    Your administrator privileges will be immediately revoked. You will be redirected out of the Admin Portal to the citizen homepage.
-                  </p>
-                </>
-              ) : (
-                <p>
-                  Are you sure you want to remove administrator privileges for <strong className="text-[#F5F2ED] font-mono">{confirmRemovalModal.target?.email}</strong>? They will become a standard citizen user.
-                </p>
-              )}
+              <p>
+                You are initiating a formal removal request for administrator <strong className="text-[#F5F2ED] font-mono">{requestRemovalModal.target?.email}</strong>.
+              </p>
+              <p className="text-[#E8C18A]">
+                <strong>Two-Person Approval Policy:</strong> Privileges will not be revoked immediately. An in-app notification will be delivered to this administrator. Only the target administrator can authorize their own removal, or decline the request.
+              </p>
             </div>
 
-            <div className="pt-2 flex justify-end gap-3">
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-[#F5F2ED]">
+                Reason for Removal Request (Optional)
+              </label>
+              <textarea
+                rows={3}
+                value={requestRemovalModal.reason}
+                onChange={(e) => setRequestRemovalModal({ ...requestRemovalModal, reason: e.target.value })}
+                placeholder="e.g. Staff reassignment to different municipal district or completion of duty..."
+                className="input text-xs resize-none bg-[#101417] border-[#2E363D] w-full"
+              />
+            </div>
+
+            <div className="pt-2 flex justify-end gap-3 border-t border-[#2E363D]">
               <button
-                onClick={() => setConfirmRemovalModal({ open: false, target: null, isSelfDemotion: false })}
+                type="button"
+                onClick={() => setRequestRemovalModal({ open: false, target: null, reason: '' })}
                 className="btn btn-secondary text-xs py-2 px-4 border-[#2E363D] text-[#F5F2ED]"
               >
                 Cancel
               </button>
               <button
-                onClick={handleConfirmRemoveAdmin}
-                className="btn text-xs font-bold py-2 px-4 rounded-xl bg-[#EF4444] text-white hover:bg-[#DC2626] transition shadow-md"
+                type="button"
+                onClick={handleSubmitRemovalRequest}
+                disabled={actionLoadingId === requestRemovalModal.target?.id}
+                className="btn text-xs font-bold py-2 px-5 rounded-xl bg-[#EF4444] text-white hover:bg-[#DC2626] transition shadow-md"
               >
-                {confirmRemovalModal.isSelfDemotion ? 'Demote Myself & Exit Portal' : 'Confirm Removal'}
+                {actionLoadingId === requestRemovalModal.target?.id ? 'Submitting...' : 'Submit Removal Request'}
               </button>
             </div>
           </div>

@@ -542,3 +542,90 @@ export async function cancelAdminInvitation(invitationId, token) {
 
   return json;
 }
+
+/**
+ * Initiate a Two-Person Removal Request (Admin A requests removal of Admin B)
+ */
+export async function requestAdminRemoval({ targetId, targetEmail, reason }, token) {
+  if (!token) throw new Error('Admin authentication token required');
+
+  const res = await fetch(`${base}/admin/management/remove-request`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ targetId, targetEmail, reason })
+  });
+
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    throw new Error(json.message || 'Failed to create removal request');
+  }
+
+  return json;
+}
+
+/**
+ * Target administrator responds to removal request (Approve or Decline)
+ */
+export async function respondToRemovalRequest(requestId, action, decisionNote, token) {
+  if (!token) throw new Error('Admin authentication token required');
+
+  const res = await fetch(`${base}/admin/management/remove-request/${requestId}/respond`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ action, decisionNote })
+  });
+
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    throw new Error(json.message || 'Failed to process removal response');
+  }
+
+  return json;
+}
+
+/**
+ * Cancel a pending removal request
+ */
+export async function cancelRemovalRequest(requestId, token) {
+  if (!token) throw new Error('Admin authentication token required');
+
+  const res = await fetch(`${base}/admin/management/remove-request/${requestId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    throw new Error(json.message || 'Failed to cancel removal request');
+  }
+
+  return json;
+}
+
+/**
+ * Fetch administrator in-app notifications
+ */
+export async function getAdminNotifications(token) {
+  if (!token) throw new Error('Admin authentication token required');
+
+  const res = await fetch(`${base}/admin/notifications`, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.message || 'Failed to fetch admin notifications');
+  }
+
+  return res.json();
+}
