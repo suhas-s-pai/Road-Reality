@@ -67,10 +67,10 @@ export default function HazardDetails() {
 
   if (loading) {
     return (
-      <main className="page grid place-items-center bg-surface p-4">
-        <div className="text-slate-600 text-sm font-semibold flex items-center gap-2">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand border-t-transparent" />
-          Loading hazard report...
+      <main className="page grid place-items-center bg-[#101417] p-4 min-h-screen">
+        <div className="text-[#A8A8A3] text-xs font-semibold flex items-center gap-2">
+          <Loader2 size={16} className="animate-spin text-[#F5A623]" />
+          <span>Loading hazard report...</span>
         </div>
       </main>
     );
@@ -78,186 +78,164 @@ export default function HazardDetails() {
 
   if (error || !h) {
     return (
-      <main className="page grid place-items-center bg-surface p-4">
-        <div className="card max-w-md p-8 text-center shadow-md">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
-            <AlertCircle size={24} />
-          </div>
-          <h1 className="mt-4 text-2xl font-bold text-slate-900">Report Not Found</h1>
-          <p className="mt-2 text-sm text-slate-600">{error || 'Unable to display details for this hazard report.'}</p>
-          <Link to="/explore" className="btn btn-primary mt-6 inline-flex items-center gap-2">
-            <ArrowLeft size={16} />
-            Back to Explore
+      <main className="page grid place-items-center bg-[#101417] p-4 min-h-screen">
+        <div className="card max-w-md w-full p-8 text-center bg-[#191D20] border-[#2E363D] rounded-3xl shadow-2xl">
+          <AlertCircle size={36} className="mx-auto text-[#EF4444] mb-3" />
+          <h1 className="text-xl font-bold text-[#F5F2ED]">Hazard Not Found</h1>
+          <p className="mt-2 text-xs text-[#A8A8A3]">
+            {error || 'This hazard report may have been resolved or deleted.'}
+          </p>
+          <Link to="/explore" className="btn btn-accent mt-5 inline-flex text-xs font-bold py-2 px-5">
+            Return to Live Map
           </Link>
         </div>
       </main>
     );
   }
 
-  const isOwner = Boolean(user && h.user_id && user.id === h.user_id);
+  const isOwner = user && h.user_id && user.id === h.user_id;
   const canDelete = isOwner || isAdmin;
+  const canManageStatus = isAdmin;
 
   return (
-    <main className="page bg-surface">
-      <div className="mx-auto max-w-5xl gap-6 p-4 py-8">
-        <Link to="/explore" className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 mb-4">
-          <ArrowLeft size={14} /> Back to Explore
-        </Link>
+    <main className="page bg-[#101417] text-[#F5F2ED] min-h-screen py-10 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-4xl space-y-6">
+        {/* Navigation Breadcrumb */}
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#A8A8A3] hover:text-[#F5A623] transition-colors"
+          >
+            <ArrowLeft size={14} /> Back
+          </button>
 
-        <div className="grid gap-6 lg:grid-cols-[1.25fr_.75fr]">
-          <section className="card overflow-hidden shadow-sm">
-            {h.imageUrl ? (
-              <img className="h-80 w-full object-cover" src={h.imageUrl} alt={`${h.category} at ${h.address}`} />
-            ) : (
-              <div className="h-48 w-full bg-slate-100 grid place-items-center text-slate-400 font-bold">
-                No Photograph Attached
+          <span className="text-xs font-mono font-bold text-[#F5A623] bg-[#F5A623]/10 border border-[#F5A623]/30 px-3 py-1 rounded-full">
+            #{String(h.id).substring(0, 8)}
+          </span>
+        </div>
+
+        {/* Status Notification */}
+        {statusSuccess && (
+          <div className="p-3.5 rounded-2xl bg-[#10B981]/15 border border-[#10B981]/30 text-xs text-[#10B981] flex items-center gap-2 animate-in fade-in font-semibold">
+            <Check size={16} />
+            <span>{statusSuccess}</span>
+          </div>
+        )}
+
+        {/* Main Details Card */}
+        <div className="card overflow-hidden bg-[#191D20] border-[#2E363D] shadow-2xl rounded-3xl space-y-6">
+          {/* Photo Banner if available */}
+          {h.imageUrl && (
+            <div className="h-64 sm:h-80 w-full overflow-hidden bg-[#101417] relative border-b border-[#2E363D]">
+              <img src={h.imageUrl} alt={h.category} className="w-full h-full object-cover" />
+            </div>
+          )}
+
+          <div className="p-6 sm:p-8 space-y-6">
+            {/* Title & Status */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#2E363D] pb-5">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-black text-[#F5F2ED] font-display">
+                  {h.category}
+                </h1>
+                <p className="text-xs text-[#A8A8A3] flex items-center gap-1.5 mt-1.5">
+                  <MapPin size={13} className="text-[#F5A623]" />
+                  <span>{h.address}</span>
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Badge value={h.status} />
+                <Badge value={h.severity} kind="severity" />
+              </div>
+            </div>
+
+            {/* Description */}
+            {h.description && (
+              <div className="p-4 rounded-2xl bg-[#22272B] border border-[#2E363D]">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#A8A8A3] block mb-1">
+                  Citizen Description
+                </span>
+                <p className="text-xs text-[#F5F2ED] italic leading-relaxed">
+                  "{h.description}"
+                </p>
               </div>
             )}
-            <div className="p-6">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="mr-auto text-3xl font-black text-slate-900">{h.category}</h1>
-                <Badge value={h.severity} kind="severity" />
-                <Badge value={h.status} />
+
+            {/* Details Grid */}
+            <div className="grid sm:grid-cols-2 gap-4 text-xs">
+              <div className="p-4 rounded-2xl bg-[#22272B] border border-[#2E363D]">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#A8A8A3] block">
+                  Submission Details
+                </span>
+                <p className="font-bold text-[#F5F2ED] mt-1">Reported {ago(h.reportedAt)}</p>
+                <p className="text-[11px] text-[#A8A8A3] font-mono mt-0.5">
+                  {h.reportedAt ? new Date(h.reportedAt).toLocaleString() : 'N/A'}
+                </p>
               </div>
 
-              <p className="mt-4 flex gap-2 text-slate-700 font-medium">
-                <MapPin size={19} className="text-brand shrink-0 mt-0.5" />
-                {h.address}
-              </p>
-
-              <div className="mt-4 leading-7 text-slate-700 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Description</p>
-                {h.description || 'No detailed description provided.'}
+              <div className="p-4 rounded-2xl bg-[#22272B] border border-[#2E363D]">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#A8A8A3] block">
+                  Assigned Authority
+                </span>
+                <p className="font-bold text-[#F5A623] mt-1">{h.assigned_to || 'Unassigned / Pending Dispatch'}</p>
+                <p className="text-[11px] text-[#A8A8A3] mt-0.5">Status: {h.status}</p>
               </div>
-
-              <div className="mt-5 grid grid-cols-2 gap-3 border-y py-4 text-sm">
-                <div>
-                  <b className="text-slate-900">Traffic impact</b>
-                  <p className="mt-1 flex items-center gap-1.5 text-slate-600">
-                    <Car size={16} />
-                    {h.trafficImpact === 'yes'
-                      ? 'Traffic affected'
-                      : h.trafficImpact === 'partial'
-                      ? 'Partially affected'
-                      : 'Not affected'}
-                  </p>
-                </div>
-                <div>
-                  <b className="text-slate-900">Reported</b>
-                  <p className="mt-1 text-slate-600">{ago(h.reportedAt)}</p>
-                </div>
-              </div>
-
-              <h2 className="mt-6 text-lg font-bold text-slate-900">Activity timeline</h2>
-              <ol className="mt-3 space-y-4 border-l-2 border-slate-200 pl-5 text-sm">
-                <li>
-                  <b className="text-slate-900">Report submitted</b>
-                  <p className="text-slate-500">{new Date(h.reportedAt).toLocaleString()}</p>
-                </li>
-                <li>
-                  <b className="text-slate-900">{h.verificationStatus}</b>
-                  <p className="text-slate-500">Last updated {ago(h.updatedAt)}</p>
-                </li>
-              </ol>
-
-              {/* Reporter Identity (Restricted Details) */}
-              <div className="mt-6 border-t pt-4">
-                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Reporter Information</h3>
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200 text-sm">
-                  <div className="h-8 w-8 rounded-full bg-slate-200 grid place-items-center text-slate-700 font-bold text-xs">
-                    <User size={16} />
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-900">{h.reporter?.name || 'Community Member'}</p>
-                    {h.reporter?.email ? (
-                      <p className="text-xs text-slate-600 flex items-center gap-1">
-                        <span>{h.reporter.email}</span>
-                        {isAdmin && <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.2 rounded font-semibold">Admin View</span>}
-                      </p>
-                    ) : (
-                      <p className="text-xs text-slate-500 italic">Personal email protected</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Administrator Status Update Action */}
-              {isAdmin && (
-                <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50/60 p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5 uppercase tracking-wide">
-                      <Shield size={14} /> Authority Actions
-                    </span>
-                    {statusSuccess && (
-                      <span className="text-xs font-bold text-emerald-700 flex items-center gap-1">
-                        <Check size={14} /> {statusSuccess}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-semibold text-slate-700">Set Status:</span>
-                    {['REPORTED', 'VERIFIED', 'IN_PROGRESS', 'RESOLVED'].map((st) => (
-                      <button
-                        key={st}
-                        disabled={updatingStatus || (h.rawStatus || '').toUpperCase() === st}
-                        onClick={() => handleStatusChange(st)}
-                        className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition ${
-                          (h.rawStatus || '').toUpperCase() === st
-                            ? 'bg-amber-800 text-white border-amber-800 shadow-sm'
-                            : 'bg-white text-slate-700 border-slate-300 hover:bg-amber-100/50'
-                        }`}
-                      >
-                        {st}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Owner / Admin Management Options */}
-              {canDelete && (
-                <div className="mt-8 border-t pt-5 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-500">
-                    {isAdmin ? (
-                      <span className="inline-flex items-center gap-1 text-amber-800">
-                        <Shield size={13} /> Administrator Action
-                      </span>
-                    ) : (
-                      'You submitted this report'
-                    )}
-                  </span>
-                  <button
-                    onClick={handleDelete}
-                    disabled={deleting}
-                    className="btn btn-secondary text-red-600 hover:bg-red-50 text-xs flex items-center gap-1.5"
-                  >
-                    {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                    {deleting ? 'Deleting report...' : 'Delete Report'}
-                  </button>
-                </div>
-              )}
             </div>
-          </section>
 
-          <aside className="space-y-4">
-            <div className="card p-5 shadow-sm">
-              <h2 className="font-bold text-slate-900">Location Map</h2>
-              <div className="mt-3 h-56 overflow-hidden rounded-xl border">
-                <MapView hazards={[h]} center={[h.latitude, h.longitude]} />
+            {/* Interactive Map of Hazard Location */}
+            {h.latitude && h.longitude && (
+              <div className="rounded-2xl overflow-hidden border border-[#2E363D] h-60">
+                <MapView
+                  hazards={[h]}
+                  center={[h.latitude, h.longitude]}
+                />
               </div>
-              <Link to="/explore" className="btn btn-secondary mt-3 w-full justify-center">
-                View on main map
+            )}
+
+            {/* Admin Status Controller if authorized */}
+            {canManageStatus && (
+              <div className="p-4 rounded-2xl bg-[#22272B] border border-[#F5A623]/30 space-y-3">
+                <span className="text-xs font-bold text-[#F5A623] uppercase tracking-wider flex items-center gap-1.5">
+                  <Shield size={14} /> Authority Status Controller
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {['REPORTED', 'VERIFIED', 'IN_PROGRESS', 'RESOLVED'].map((st) => (
+                    <button
+                      key={st}
+                      onClick={() => handleStatusChange(st)}
+                      disabled={updatingStatus}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                        (h.rawStatus || h.status || '').toUpperCase() === st
+                          ? 'bg-[#F5A623] text-[#101417]'
+                          : 'bg-[#191D20] text-[#A8A8A3] border border-[#2E363D] hover:text-[#F5F2ED]'
+                      }`}
+                    >
+                      {st}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="pt-4 border-t border-[#2E363D] flex items-center justify-between">
+              <Link to="/explore" className="btn btn-secondary text-xs py-2 px-4">
+                Explore on Map
               </Link>
+
+              {canDelete && (
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="btn btn-secondary text-xs text-[#EF4444] border-[#EF4444]/30 hover:bg-[#EF4444]/15 py-2 px-4"
+                >
+                  <Trash2 size={13} />
+                  <span>{deleting ? 'Deleting...' : 'Delete Report'}</span>
+                </button>
+              )}
             </div>
-            <button
-              onClick={() => alert('Thank you. Incorrect information flag submitted for review.')}
-              className="btn btn-secondary w-full justify-center text-xs"
-            >
-              <Flag size={16} />
-              Report incorrect information
-            </button>
-          </aside>
+          </div>
         </div>
       </div>
     </main>

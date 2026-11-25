@@ -4,42 +4,76 @@ import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge } from './Badges';
 import { ago } from '../utils/formatters';
+import { MapPin, AlertTriangle, ArrowRight } from 'lucide-react';
 
-// Hazard marker custom icon styled by status and severity
-const createHazardIcon = (status, severity) => {
-  let indicator = '';
-  const s = (status || '').toLowerCase();
-  const sev = (severity || '').toLowerCase();
+const categoryColors = {
+  Pothole: '#F5A623', // Warm amber
+  Waterlogging: '#06B6D4', // Cyan
+  'Fallen Tree': '#10B981', // Emerald
+  'Road Debris': '#C87942', // Copper
+  'Broken Streetlight': '#E8C18A', // Champagne
+  'Blocked Road': '#EF4444', // Red
+  Accident: '#EF4444',
+  Other: '#F5A623'
+};
 
-  if (s === 'resolved') {
-    indicator = 'safe';
-  } else if (sev === 'critical') {
-    indicator = 'critical';
-  } else if (sev === 'high') {
-    indicator = 'high';
-  } else if (s === 'verified') {
-    indicator = 'verified';
-  } else if (s === 'in_progress') {
-    indicator = 'in-progress';
-  }
+const categoryIcons = {
+  Pothole: '🕳️',
+  Waterlogging: '🌊',
+  'Fallen Tree': '🌳',
+  'Road Debris': '🚧',
+  'Broken Streetlight': '💡',
+  'Blocked Road': '⛔',
+  Accident: '🚨',
+  Other: '⚠️'
+};
+
+// Hazard marker custom glowing icon
+const createHazardIcon = (category, status, severity) => {
+  const isResolved = (status || '').toUpperCase() === 'RESOLVED';
+  const color = isResolved ? '#10B981' : (categoryColors[category] || '#F5A623');
+  const icon = categoryIcons[category] || '⚠️';
 
   return L.divIcon({
-    className: '',
-    html: `<div class="marker-dot ${indicator}"></div>`,
-    iconSize: [20, 20],
-    iconAnchor: [10, 10]
+    className: 'custom-hazard-marker',
+    html: `
+      <div style="
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background-color: #191D20;
+        border: 2px solid ${color};
+        box-shadow: 0 0 14px ${color}80, 0 4px 10px rgba(0,0,0,0.6);
+        cursor: pointer;
+        transition: transform 0.2s ease;
+      ">
+        <span style="font-size: 14px; line-height: 1;">${icon}</span>
+      </div>
+    `,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -18]
   });
 };
 
-// User location custom icon
+// User location custom glowing icon
 const userIcon = L.divIcon({
-  className: '',
-  html: `<div style="background-color: #3b82f6; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 12px rgba(59,130,246,0.7);"></div>`,
-  iconSize: [20, 20],
-  iconAnchor: [10, 10]
+  className: 'custom-user-marker',
+  html: `
+    <div style="position: relative; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
+      <div style="position: absolute; width: 32px; height: 32px; border-radius: 50%; background: rgba(245, 166, 35, 0.3); animation: pulse-ring 2s infinite ease-in-out;"></div>
+      <div style="width: 14px; height: 14px; border-radius: 50%; background: #F5A623; border: 2.5px solid #101417; box-shadow: 0 0 12px #F5A623;"></div>
+    </div>
+  `,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12]
 });
 
-// Component to re-center map when user location or center prop changes
+// Component to re-center map when location changes
 function MapRecenter({ center }) {
   const map = useMap();
   useEffect(() => {
@@ -50,9 +84,8 @@ function MapRecenter({ center }) {
   return null;
 }
 
-export default function MapView({ hazards = [], userLocation = null, center = null, onSelect }) {
-  // Determine initial center
-  const defaultCenter = [12.8834, 74.8397]; // Default view
+export default function MapView({ hazards = [], userLocation = null, center = null, onSelectHazard }) {
+  const defaultCenter = [12.9716, 77.5946];
   let initialCenter = defaultCenter;
 
   if (userLocation && userLocation.latitude && userLocation.longitude) {
@@ -68,24 +101,25 @@ export default function MapView({ hazards = [], userLocation = null, center = nu
       center={initialCenter}
       zoom={14}
       scrollWheelZoom
-      className="h-full w-full rounded-2xl"
+      className="h-full w-full rounded-2xl bg-[#101417]"
     >
+      {/* CartoDB Dark Matter Cinematic Map Tiles */}
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
       />
 
       <MapRecenter center={initialCenter} />
 
-      {/* User / Selected Location Marker */}
+      {/* User Current / Selected GPS Marker */}
       {userLocation && userLocation.latitude && userLocation.longitude && (
         <Marker position={[userLocation.latitude, userLocation.longitude]} icon={userIcon}>
           <Popup>
-            <div className="text-center min-w-36">
-              <p className="font-extrabold text-sm text-blue-600">
-                📍 {userLocation.isManual ? 'Selected Location' : 'You are here'}
-              </p>
-              <p className="text-xs font-semibold text-slate-800 mt-1">
+            <div className="p-3 text-center min-w-44 bg-[#22272B] text-[#F5F2ED] rounded-xl">
+              <span className="text-[11px] font-bold text-[#F5A623] uppercase tracking-wider block">
+                📍 {userLocation.isManual ? 'Selected Area' : 'Your GPS Location'}
+              </span>
+              <p className="text-xs font-bold mt-1 text-[#F5F2ED]">
                 {userLocation.placeName || `${userLocation.latitude.toFixed(4)}°, ${userLocation.longitude.toFixed(4)}°`}
               </p>
             </div>
@@ -93,31 +127,52 @@ export default function MapView({ hazards = [], userLocation = null, center = nu
         </Marker>
       )}
 
-      {/* Hazard Markers */}
+      {/* Real Supabase Hazard Markers */}
       {hazards.map((h) => {
         if (!h.latitude || !h.longitude || isNaN(h.latitude) || isNaN(h.longitude)) return null;
+
+        const icon = createHazardIcon(h.category, h.status, h.severity);
 
         return (
           <Marker
             key={h.id}
             position={[h.latitude, h.longitude]}
-            icon={createHazardIcon(h.status, h.severity)}
-            eventHandlers={{ click: () => onSelect?.(h) }}
+            icon={icon}
+            eventHandlers={{
+              click: () => onSelectHazard && onSelectHazard(h)
+            }}
           >
             <Popup>
-              <div className="min-w-48">
-                <b className="text-base text-slate-900">{h.category}</b>
-                <p className="my-1 text-sm text-slate-600">{h.address}</p>
-                <div className="mt-2 flex items-center justify-between">
-                  <Badge value={h.severity} kind="severity" />
-                  <span className="text-xs text-slate-500">{ago(h.reportedAt)}</span>
+              <div className="p-3.5 min-w-56 bg-[#22272B] text-[#F5F2ED] rounded-2xl border border-[#2E363D] space-y-2">
+                <div className="flex items-center justify-between gap-2 border-b border-[#2E363D] pb-2">
+                  <div className="flex items-center gap-1.5 font-bold text-xs text-[#F5F2ED]">
+                    <span>{categoryIcons[h.category] || '⚠️'}</span>
+                    <span>{h.category}</span>
+                  </div>
+                  <Badge value={h.status} />
                 </div>
-                <Link
-                  className="mt-3 block text-sm font-bold text-brand hover:underline"
-                  to={`/hazards/${h.id}`}
-                >
-                  View details →
-                </Link>
+
+                <p className="text-xs text-[#A8A8A3] flex items-start gap-1 line-clamp-2">
+                  <MapPin size={13} className="text-[#F5A623] shrink-0 mt-0.5" />
+                  <span>{h.address || `${h.latitude.toFixed(4)}, ${h.longitude.toFixed(4)}`}</span>
+                </p>
+
+                {h.description && (
+                  <p className="text-[11px] text-[#A8A8A3] italic line-clamp-2">
+                    "{h.description}"
+                  </p>
+                )}
+
+                <div className="pt-2 border-t border-[#2E363D] flex items-center justify-between">
+                  <span className="text-[10px] text-[#A8A8A3]">{ago(h.reportedAt)}</span>
+                  <Link
+                    to={`/hazards/${h.id}`}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-[#F5A623] hover:underline"
+                  >
+                    <span>View Details</span>
+                    <ArrowRight size={12} />
+                  </Link>
+                </div>
               </div>
             </Popup>
           </Marker>

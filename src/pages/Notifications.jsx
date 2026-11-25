@@ -14,6 +14,7 @@ import {
   MapPin,
   ExternalLink
 } from 'lucide-react';
+import { ago } from '../utils/formatters';
 
 export default function Notifications() {
   const { user, session } = useAuth();
@@ -72,11 +73,11 @@ export default function Notifications() {
       category: r.category,
       address: r.address,
       type: 'SUBMISSION',
-      title: `Report Submitted: ${r.category}`,
-      message: `Your hazard report #${String(r.id).substring(0, 8)} has been saved and shared with community drivers.`,
+      title: `Report Recorded: ${r.category}`,
+      message: `Your hazard report #${String(r.id).substring(0, 8)} was recorded and posted to the live community map.`,
       timestamp: r.reportedAt,
       icon: CheckCircle2,
-      color: 'text-teal-600 bg-teal-50 border-teal-200'
+      accent: 'text-[#F5A623] bg-[#F5A623]/15 border-[#F5A623]/30'
     });
 
     // 2. Verification Alert
@@ -88,79 +89,78 @@ export default function Notifications() {
         address: r.address,
         type: 'VERIFICATION',
         title: `Report Verified: ${r.category}`,
-        message: `Authorities have officially verified your hazard report. Dispatch planning is underway.`,
+        message: `Road safety officers verified this hazard. Maintenance crew assignment in progress.`,
         timestamp: r.updatedAt || r.reportedAt,
         icon: Shield,
-        color: 'text-sky-600 bg-sky-50 border-sky-200'
+        accent: 'text-[#06B6D4] bg-[#06B6D4]/15 border-[#06B6D4]/30'
       });
     }
 
     // 3. Work in progress
     if (status === 'IN_PROGRESS' || status === 'RESOLVED') {
       notifs.push({
-        id: `prog-${r.id}`,
+        id: `inp-${r.id}`,
         reportId: r.id,
         category: r.category,
         address: r.address,
-        type: 'IN_PROGRESS',
-        title: `Repair Crew Dispatched`,
-        message: `A road maintenance team has been deployed to ${r.address || 'the hazard site'}.`,
+        type: 'PROGRESS',
+        title: `Crew Dispatched: ${r.category}`,
+        message: `A municipal repair unit has been dispatched to ${r.address || 'the hazard site'}.`,
         timestamp: r.updatedAt || r.reportedAt,
-        icon: AlertTriangle,
-        color: 'text-purple-600 bg-purple-50 border-purple-200'
+        icon: Clock,
+        accent: 'text-[#C87942] bg-[#C87942]/15 border-[#C87942]/30'
       });
     }
 
-    // 4. Hazard Resolved
+    // 4. Resolution
     if (status === 'RESOLVED') {
       notifs.push({
         id: `res-${r.id}`,
         reportId: r.id,
         category: r.category,
         address: r.address,
-        type: 'RESOLVED',
-        title: `Hazard Resolved & Repaired`,
-        message: `Great news! The ${r.category} hazard has been fully repaired and verified safe for motorists.`,
+        type: 'RESOLUTION',
+        title: `Hazard Resolved: ${r.category}`,
+        message: `Repairs have been marked completed. Road surface is now safe for traffic.`,
         timestamp: r.updatedAt || r.reportedAt,
         icon: CheckCircle2,
-        color: 'text-emerald-600 bg-emerald-50 border-emerald-200'
+        accent: 'text-[#10B981] bg-[#10B981]/15 border-[#10B981]/30'
       });
     }
 
     return notifs;
   });
 
-  // Sort by latest timestamp
-  notificationsList.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
-
-  const unreadCount = notificationsList.filter((n) => !readIds.includes(n.id)).length;
-
   const filteredNotifs = notificationsList.filter((n) => {
     if (filter === 'UNREAD') return !readIds.includes(n.id);
+    if (filter === 'UPDATES') return n.type !== 'SUBMISSION';
     return true;
   });
 
+  const unreadCount = notificationsList.filter((n) => !readIds.includes(n.id)).length;
+
   return (
-    <main className="page bg-slate-50 min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+    <main className="page bg-[#101417] text-[#F5F2ED] min-h-screen py-10 px-4 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-4xl space-y-6">
         {/* Header Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#2E363D] pb-6">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="grid h-8 w-8 place-items-center rounded-xl bg-teal-100 text-teal-800">
-                <Bell size={18} />
-              </span>
-              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-                Activity Notifications
+            <div className="flex items-center gap-2 text-xs font-bold text-[#F5A623] uppercase tracking-wider mb-1">
+              <Bell size={15} />
+              <span>Notification Center</span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-2xl sm:text-3xl font-black text-[#F5F2ED] tracking-tight font-display">
+                Notifications
               </h1>
               {unreadCount > 0 && (
-                <span className="rounded-full bg-amber-500 text-white font-bold text-xs px-2.5 py-0.5">
-                  {unreadCount} New
+                <span className="rounded-full bg-[#F5A623] text-[#101417] px-2.5 py-0.5 text-xs font-black shadow-amber-glow">
+                  {unreadCount} new
                 </span>
               )}
             </div>
-            <p className="mt-1 text-xs sm:text-sm text-slate-600">
-              Live updates on your reported road hazards, municipal verifications, and crew dispatches.
+            <p className="mt-1 text-xs text-[#A8A8A3]">
+              Real-time updates regarding your reported hazards, verifications, and road repairs.
             </p>
           </div>
 
@@ -168,17 +168,17 @@ export default function Notifications() {
             <button
               onClick={loadNotifications}
               disabled={loading}
-              className="btn btn-secondary text-xs flex items-center gap-1.5"
+              className="btn btn-secondary text-xs flex items-center gap-1.5 py-2 px-3 border-[#2E363D]"
               title="Refresh"
             >
-              <RefreshCw size={13} className={loading ? 'animate-spin text-teal-600' : 'text-slate-500'} />
+              <RefreshCw size={13} className={loading ? 'animate-spin text-[#F5A623]' : 'text-[#A8A8A3]'} />
               <span>Refresh</span>
             </button>
 
             {unreadCount > 0 && (
               <button
                 onClick={markAllRead}
-                className="btn btn-secondary text-xs font-bold flex items-center gap-1.5 hover:text-teal-700"
+                className="btn btn-secondary text-xs flex items-center gap-1.5 py-2 px-3 border-[#2E363D] text-[#F5A623]"
               >
                 <CheckCheck size={14} />
                 <span>Mark All Read</span>
@@ -187,105 +187,105 @@ export default function Notifications() {
           </div>
         </div>
 
-        {/* Filter Toggle */}
+        {/* Filter Chips */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setFilter('ALL')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
-              filter === 'ALL'
-                ? 'bg-[#0B3B3C] text-white shadow-xs'
-                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            All Notifications ({notificationsList.length})
-          </button>
-
-          <button
-            onClick={() => setFilter('UNREAD')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
-              filter === 'UNREAD'
-                ? 'bg-[#0B3B3C] text-white shadow-xs'
-                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            Unread ({unreadCount})
-          </button>
+          {[
+            { id: 'ALL', label: `All Updates (${notificationsList.length})` },
+            { id: 'UNREAD', label: `Unread (${unreadCount})` },
+            { id: 'UPDATES', label: `Authority Actions` }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setFilter(tab.id)}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
+                filter === tab.id
+                  ? 'bg-[#22272B] text-[#F5A623] border border-[#F5A623]/40'
+                  : 'bg-[#191D20] text-[#A8A8A3] border border-[#2E363D] hover:text-[#F5F2ED]'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
-        {/* Notifications Feed */}
+        {/* Notifications List */}
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="card p-4 animate-pulse space-y-2 bg-white">
-                <div className="h-4 bg-slate-200 rounded w-1/4" />
-                <div className="h-3 bg-slate-100 rounded w-3/4" />
-              </div>
+              <div key={i} className="card p-5 animate-pulse bg-[#191D20] border-[#2E363D] rounded-2xl h-24" />
             ))}
           </div>
         ) : filteredNotifs.length === 0 ? (
-          <div className="card p-12 text-center bg-white border border-slate-200 shadow-xs">
-            <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-teal-50 text-teal-700 mb-3">
-              <CheckCircle2 size={28} />
-            </div>
-            <h3 className="text-lg font-bold text-slate-900">All Caught Up!</h3>
-            <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
-              {filter === 'UNREAD'
-                ? 'You have read all your notifications.'
-                : 'You will receive notifications whenever a road report status changes or authorities dispatch repairs.'}
+          <div className="card p-12 text-center bg-[#191D20] border-[#2E363D] rounded-3xl">
+            <Bell size={36} className="mx-auto text-[#A8A8A3] mb-3" />
+            <h3 className="text-base font-bold text-[#F5F2ED]">No notifications to display</h3>
+            <p className="text-xs text-[#A8A8A3] mt-1 max-w-sm mx-auto">
+              You will receive alerts here as authorities review and resolve your reported hazards.
             </p>
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredNotifs.map((n) => {
-              const Icon = n.icon;
-              const isRead = readIds.includes(n.id);
+            {filteredNotifs.map((notif) => {
+              const Icon = notif.icon;
+              const isRead = readIds.includes(notif.id);
 
               return (
                 <div
-                  key={n.id}
-                  onClick={() => toggleRead(n.id)}
-                  className={`card p-4 transition-all duration-150 cursor-pointer flex items-start justify-between gap-4 ${
-                    isRead ? 'bg-white/80 opacity-75' : 'bg-white border-teal-200/80 shadow-xs'
+                  key={notif.id}
+                  className={`card p-4 rounded-2xl transition border ${
+                    isRead
+                      ? 'bg-[#191D20] border-[#2E363D] opacity-80'
+                      : 'bg-[#22272B] border-[#F5A623]/30 shadow-amber-glow/20'
                   }`}
                 >
-                  <div className="flex items-start gap-3">
-                    <span className={`grid h-9 w-9 place-items-center rounded-xl border shrink-0 ${n.color}`}>
-                      <Icon size={18} />
-                    </span>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-bold text-slate-900 leading-tight">{n.title}</h4>
-                        {!isRead && (
-                          <span className="h-2 w-2 rounded-full bg-orange-500 shrink-0" />
-                        )}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className={`h-10 w-10 rounded-xl flex items-center justify-center border font-bold shrink-0 mt-0.5 ${notif.accent}`}>
+                        <Icon size={18} />
                       </div>
 
-                      <p className="text-xs text-slate-600 leading-relaxed">{n.message}</p>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-extrabold text-sm text-[#F5F2ED]">{notif.title}</h3>
+                          {!isRead && (
+                            <span className="h-2 w-2 rounded-full bg-[#F5A623] shrink-0 animate-pulse" />
+                          )}
+                        </div>
 
-                      <div className="pt-1 flex items-center gap-3 text-[11px] text-slate-400">
-                        <span className="flex items-center gap-1">
-                          <Clock size={11} />
-                          {n.timestamp ? new Date(n.timestamp).toLocaleString() : 'Recent'}
-                        </span>
-                        {n.address && (
-                          <span className="flex items-center gap-1 text-slate-500 truncate max-w-xs">
-                            <MapPin size={11} className="text-teal-600 shrink-0" />
-                            <span className="truncate">{n.address}</span>
-                          </span>
-                        )}
+                        <p className="text-xs text-[#A8A8A3] mt-1 leading-relaxed">
+                          {notif.message}
+                        </p>
+
+                        <div className="flex items-center gap-3 mt-2 text-[11px] text-[#A8A8A3] font-mono">
+                          {notif.address && (
+                            <span className="flex items-center gap-1 truncate max-w-xs">
+                              <MapPin size={11} className="text-[#F5A623]" /> {notif.address}
+                            </span>
+                          )}
+                          <span>•</span>
+                          <span>{ago(notif.timestamp)}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <Link
-                    to={`/hazards/${n.reportId}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="p-2 rounded-xl text-slate-400 hover:text-teal-700 hover:bg-slate-100 transition shrink-0"
-                    title="View Report"
-                  >
-                    <ExternalLink size={16} />
-                  </Link>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => toggleRead(notif.id)}
+                        className="text-[11px] font-bold text-[#A8A8A3] hover:text-[#F5F2ED] px-2 py-1"
+                        title={isRead ? 'Mark as unread' : 'Mark as read'}
+                      >
+                        {isRead ? 'Unread' : 'Mark read'}
+                      </button>
+
+                      <Link
+                        to={`/hazards/${notif.reportId}`}
+                        className="grid h-8 w-8 place-items-center rounded-xl bg-[#101417] text-[#A8A8A3] hover:text-[#F5A623] hover:bg-[#F5A623]/10 border border-[#2E363D] transition"
+                        title="View report"
+                      >
+                        <ExternalLink size={13} />
+                      </Link>
+                    </div>
+                  </div>
                 </div>
               );
             })}

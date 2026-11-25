@@ -1,13 +1,13 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  color: #0f172a;
-  background-color: #f8fafc;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #F5F2ED;
+  background-color: #101417;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -17,8 +17,8 @@
 html, body {
   margin: 0;
   padding: 0;
-  background-color: #f8fafc;
-  color: #0f172a;
+  background-color: #101417;
+  color: #F5F2ED;
   min-height: 100vh;
   overflow-x: hidden;
 }
@@ -29,47 +29,62 @@ a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid #0d9488;
+  outline: 2px solid #F5A623;
   outline-offset: 2px;
 }
 
 /* Page container */
 .page {
-  min-height: calc(100vh - 64px);
-  background-color: #f8fafc;
+  min-height: calc(100vh - 72px);
+  background-color: #101417;
+  color: #F5F2ED;
 }
 
-/* Modern Card style */
+/* Premium Dark Slate Card */
 .card {
-  border: 1px solid #e2e8f0;
+  border: 1px solid #2E363D;
   border-radius: 1rem;
-  background-color: #ffffff;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
-  transition: box-shadow 150ms ease, border-color 150ms ease;
+  background-color: #22272B;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.45);
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 180ms ease, border-color 180ms ease;
 }
 
 .card-hover:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+  border-color: rgba(245, 166, 35, 0.35);
+  box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.6), 0 0 15px -3px rgba(245, 166, 35, 0.15);
 }
 
-/* Form input */
+/* Glass panel */
+.glass-panel {
+  background: rgba(25, 29, 32, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Form inputs in cinematic dark */
 .input {
   width: 100%;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #2E363D;
   border-radius: 0.75rem;
-  background-color: #ffffff;
-  padding: 0.65rem 0.85rem;
-  color: #0f172a;
+  background-color: #191D20;
+  padding: 0.7rem 0.95rem;
+  color: #F5F2ED;
   font-size: 0.875rem;
   line-height: 1.25rem;
-  transition: border-color 150ms ease, box-shadow 150ms ease;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+.input::placeholder {
+  color: #6B7280;
 }
 
 .input:focus {
-  border-color: #0d9488;
+  border-color: #F5A623;
+  background-color: #22272B;
   outline: none;
-  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+  box-shadow: 0 0 0 3px rgba(245, 166, 35, 0.2);
 }
 
 /* Base button */
@@ -81,11 +96,11 @@ textarea:focus-visible {
   gap: 0.5rem;
   border: 1px solid transparent;
   border-radius: 0.75rem;
-  padding: 0.6rem 1.15rem;
-  font-weight: 600;
+  padding: 0.65rem 1.25rem;
+  font-weight: 700;
   font-size: 0.875rem;
   line-height: 1.25;
-  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
   text-decoration: none;
   white-space: nowrap;
@@ -93,103 +108,157 @@ textarea:focus-visible {
 }
 
 .btn:active {
-  transform: translateY(1px) scale(0.99);
+  transform: translateY(1px) scale(0.98);
 }
 
-/* Primary = Deep Teal */
+/* Primary = Dark Graphite with Amber/Copper Border */
 .btn-primary {
-  background-color: #0d9488;
-  color: #ffffff;
-  box-shadow: 0 1px 2px 0 rgba(13, 148, 136, 0.2);
+  background-color: #191D20;
+  border-color: #374151;
+  color: #F5F2ED;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .btn-primary:hover {
-  background-color: #0f766e;
-  box-shadow: 0 4px 6px -1px rgba(13, 148, 136, 0.25);
+  background-color: #22272B;
+  border-color: #F5A623;
+  color: #F5A623;
+  box-shadow: 0 4px 14px rgba(245, 166, 35, 0.15);
 }
 
-/* Accent = Vibrant Orange */
+/* Accent = Warm Amber to Copper Gradient (Primary Brand Action) */
 .btn-accent {
-  background-color: #f97316;
-  color: #ffffff;
-  box-shadow: 0 1px 2px 0 rgba(249, 115, 22, 0.2);
+  background: linear-gradient(135deg, #F5A623 0%, #C87942 100%);
+  color: #101417;
+  border: none;
+  font-weight: 800;
+  box-shadow: 0 4px 14px rgba(245, 166, 35, 0.35);
 }
 
 .btn-accent:hover {
-  background-color: #ea580c;
-  box-shadow: 0 4px 6px -1px rgba(249, 115, 22, 0.25);
+  background: linear-gradient(135deg, #F8B84E 0%, #D98A52 100%);
+  box-shadow: 0 6px 20px rgba(245, 166, 35, 0.5);
+  transform: translateY(-1px);
 }
 
-/* Secondary = Clean White / Soft Gray */
+/* Secondary = Deep Slate with subtle hover */
 .btn-secondary {
-  background-color: #ffffff;
-  border-color: #e2e8f0;
-  color: #334155;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  background-color: #22272B;
+  border-color: #2E363D;
+  color: #A8A8A3;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .btn-secondary:hover {
-  background-color: #f8fafc;
-  border-color: #cbd5e1;
-  color: #0f172a;
+  background-color: #2A3035;
+  border-color: #4B5563;
+  color: #F5F2ED;
 }
 
-/* Dark Teal Admin button */
+/* Dedicated Admin Button */
 .btn-admin {
-  background-color: #0b3b3c;
-  color: #ffffff;
-  border-color: transparent;
-  box-shadow: 0 1px 2px 0 rgba(11, 59, 60, 0.2);
+  background-color: #191D20;
+  color: #F5A623;
+  border-color: rgba(245, 166, 35, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .btn-admin:hover {
-  background-color: #072627;
-  box-shadow: 0 4px 6px -1px rgba(11, 59, 60, 0.3);
+  background-color: #22272B;
+  border-color: #F5A623;
+  box-shadow: 0 0 16px rgba(245, 166, 35, 0.35);
 }
 
 /* Map marker styles */
-.marker-dot {
-  width: 20px;
-  height: 20px;
+.marker-pin {
+  width: 28px;
+  height: 28px;
+  border-radius: 50% 50% 50% 0;
+  background: #F5A623;
+  position: absolute;
+  transform: rotate(-45deg);
+  left: 50%;
+  top: 50%;
+  margin: -20px 0 0 -14px;
+  box-shadow: 0 0 12px rgba(245, 166, 35, 0.6);
+  border: 2px solid #101417;
+}
+
+.marker-pin::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  margin: 7px 0 0 7px;
+  background: #101417;
+  position: absolute;
   border-radius: 50%;
-  border: 3px solid #ffffff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-  background-color: #f97316;
+}
+
+.marker-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #101417;
+  box-shadow: 0 0 10px rgba(245, 166, 35, 0.7);
+  background-color: #F5A623;
 }
 
 .marker-dot.critical {
-  background-color: #ef4444;
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+  background-color: #EF4444;
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.8);
 }
 
 .marker-dot.high {
-  background-color: #f97316;
+  background-color: #F5A623;
+  box-shadow: 0 0 12px rgba(245, 166, 35, 0.7);
 }
 
 .marker-dot.verified {
-  background-color: #0284c7;
+  background-color: #06B6D4;
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.7);
 }
 
 .marker-dot.in-progress {
-  background-color: #9333ea;
+  background-color: #C87942;
+  box-shadow: 0 0 12px rgba(200, 121, 66, 0.7);
 }
 
 .marker-dot.safe {
-  background-color: #10b981;
+  background-color: #10B981;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.7);
 }
 
-/* Leaflet container polish */
+/* Pulse animation for user GPS location */
+@keyframes pulse-ring {
+  0% { transform: scale(0.9); opacity: 0.9; }
+  50% { transform: scale(1.6); opacity: 0.3; }
+  100% { transform: scale(0.9); opacity: 0.9; }
+}
+
+.pulse-location {
+  animation: pulse-ring 2.2s infinite ease-in-out;
+}
+
+/* Leaflet container polish for Dark Tile Map */
 .leaflet-container {
   font-family: inherit !important;
+  background-color: #101417 !important;
   z-index: 10;
 }
 
 .leaflet-popup-content-wrapper {
+  background-color: #22272B !important;
+  color: #F5F2ED !important;
   border-radius: 1rem !important;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1) !important;
-  border: 1px solid #e2e8f0;
+  box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.8), 0 0 0 1px #2E363D !important;
+  border: 1px solid #2E363D !important;
   padding: 0 !important;
   overflow: hidden;
+}
+
+.leaflet-popup-tip {
+  background-color: #22272B !important;
+  border: 1px solid #2E363D !important;
 }
 
 .leaflet-popup-content {
@@ -197,21 +266,21 @@ textarea:focus-visible {
   line-height: 1.4 !important;
 }
 
-/* Custom scrollbars */
+/* Custom scrollbars in midnight charcoal */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: #101417;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #2E363D;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #F5A623;
 }

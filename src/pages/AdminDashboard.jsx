@@ -120,7 +120,6 @@ export default function AdminDashboard() {
         setReportsList(reportsRes.value);
       }
 
-      // Collect any failures
       const failures = [statsRes, usersRes, reportsRes].filter((r) => r.status === 'rejected');
       if (failures.length > 0) {
         const msg = failures.map((f) => f.reason?.message || 'API request failed').join('. ');
@@ -288,10 +287,10 @@ export default function AdminDashboard() {
   // Auth Loading Screen
   if (authLoading) {
     return (
-      <main className="page grid place-items-center bg-slate-50 p-4 min-h-screen">
+      <main className="page grid place-items-center bg-[#101417] p-4 min-h-screen">
         <div className="flex flex-col items-center gap-3">
-          <RefreshCw className="animate-spin text-teal-600" size={32} />
-          <p className="text-sm font-semibold text-slate-600">Verifying administrator authorization...</p>
+          <RefreshCw className="animate-spin text-[#F5A623]" size={32} />
+          <p className="text-xs font-semibold text-[#A8A8A3]">Verifying administrator credentials...</p>
         </div>
       </main>
     );
@@ -300,23 +299,23 @@ export default function AdminDashboard() {
   // Access Control Screen for non-admin accounts
   if (!isAdmin) {
     return (
-      <main className="page grid place-items-center bg-slate-50 p-4 min-h-screen">
-        <div className="max-w-md w-full rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-xl">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100 text-amber-800">
-            <ShieldAlert size={32} />
+      <main className="page grid place-items-center bg-[#101417] p-4 min-h-screen">
+        <div className="max-w-md w-full rounded-3xl border border-[#2E363D] bg-[#191D20] p-8 text-center shadow-2xl">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F5A623]/15 text-[#F5A623] border border-[#F5A623]/30">
+            <ShieldAlert size={30} />
           </div>
 
-          <h1 className="mt-5 text-2xl font-black text-slate-900">Admin Authorization Required</h1>
+          <h1 className="mt-5 text-2xl font-black text-[#F5F2ED] font-display">Administrator Access Required</h1>
 
           {currentUser ? (
             <>
-              <p className="mt-3 text-sm text-slate-600 leading-relaxed">
-                You are authenticated as <span className="font-bold text-slate-800">{currentUser.email}</span>, but your account is not yet assigned the <code className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-900 font-bold">admin</code> role.
+              <p className="mt-3 text-xs text-[#A8A8A3] leading-relaxed">
+                You are authenticated as <span className="font-bold text-[#F5F2ED]">{currentUser.email}</span>, but your account is not yet assigned the <code className="bg-[#22272B] px-1.5 py-0.5 rounded text-[#F5A623] font-bold">admin</code> role in the Supabase database.
               </p>
-              <div className="mt-5 p-4 rounded-xl bg-slate-50 border border-slate-200 text-left text-xs">
-                <p className="font-bold text-slate-800 mb-1">To enable this account as Admin:</p>
-                <p className="text-slate-500 mb-2">Run this query in your Supabase SQL Editor:</p>
-                <pre className="block bg-slate-900 text-teal-300 p-2.5 rounded-lg font-mono text-[11px] overflow-x-auto select-all">
+              <div className="mt-5 p-4 rounded-2xl bg-[#101417] border border-[#2E363D] text-left text-xs">
+                <p className="font-bold text-[#F5F2ED] mb-1">To enable this account as Admin:</p>
+                <p className="text-[#A8A8A3] text-[11px] mb-2">Run this query in your Supabase SQL Editor:</p>
+                <pre className="block bg-[#191D20] text-[#F5A623] p-3 rounded-xl font-mono text-[11px] overflow-x-auto select-all border border-[#2E363D]">
 {`UPDATE public.profiles
 SET role = 'admin', updated_at = now()
 WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT 1);`}
@@ -324,7 +323,7 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
               </div>
             </>
           ) : (
-            <p className="mt-3 text-sm text-slate-600 leading-relaxed">
+            <p className="mt-3 text-xs text-[#A8A8A3] leading-relaxed">
               Please sign in with an authorized Google administrator account.
             </p>
           )}
@@ -332,14 +331,14 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
           <div className="mt-6 flex flex-col gap-2">
             <button
               onClick={() => navigate('/')}
-              className="w-full rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-teal-700 transition"
+              className="w-full btn btn-accent text-xs font-bold py-2.5 justify-center"
             >
               Return to Application Home
             </button>
             {currentUser && (
               <button
                 onClick={() => window.location.reload()}
-                className="w-full rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition"
+                className="w-full btn btn-secondary text-xs font-semibold py-2 justify-center"
               >
                 Re-check Admin Role
               </button>
@@ -441,23 +440,23 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
     : 0;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-[#101417] text-[#F5F2ED] flex flex-col">
       {/* Top Console Bar */}
-      <div className="border-b border-slate-200 bg-white px-4 py-3 sm:px-6">
+      <div className="border-b border-[#2E363D] bg-[#191D20] px-4 py-3 sm:px-6">
         <div className="mx-auto max-w-7xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="grid h-8 w-8 place-items-center rounded-xl bg-[#0B3B3C] text-white">
-              <Crown size={16} className="text-amber-400 fill-amber-400" />
+          <div className="flex items-center gap-3">
+            <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-[#F5A623] to-[#C87942] text-[#101417] shadow-amber-glow">
+              <Crown size={18} className="stroke-[2.5]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-base font-black text-slate-900 tracking-tight">Authority Admin Portal</h1>
-                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                <h1 className="text-sm font-extrabold text-[#F5F2ED] tracking-tight">Authority Admin Portal</h1>
+                <span className="rounded-full bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30 px-2 py-0.5 text-[10px] font-bold">
                   Live Supabase
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500">
-                Logged in as <span className="font-semibold text-slate-700">{currentUser?.email}</span> (Administrator)
+              <p className="text-[11px] text-[#A8A8A3]">
+                Logged in as <span className="font-semibold text-[#F5F2ED]">{currentUser?.email}</span> (Administrator)
               </p>
             </div>
           </div>
@@ -466,15 +465,15 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
             <button
               onClick={loadPortalData}
               disabled={loading}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-xs"
+              className="btn btn-secondary text-xs flex items-center gap-1.5 py-1.5 px-3 border-[#2E363D]"
             >
-              <RefreshCw size={13} className={loading ? 'animate-spin text-teal-600' : 'text-slate-500'} />
-              <span>Refresh Data</span>
+              <RefreshCw size={13} className={loading ? 'animate-spin text-[#F5A623]' : 'text-[#A8A8A3]'} />
+              <span>Refresh</span>
             </button>
 
             <Link
               to="/"
-              className="flex items-center gap-1.5 rounded-xl bg-teal-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-teal-700 transition shadow-xs"
+              className="btn btn-primary text-xs font-bold py-1.5 px-3 border-[#2E363D] text-[#F5F2ED] hover:border-[#F5A623] hover:text-[#F5A623]"
             >
               <span>Back to App</span>
               <ArrowRight size={13} />
@@ -487,14 +486,17 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
       <div className="mx-auto max-w-7xl w-full flex-1 p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Left Sidebar */}
         <aside className="lg:col-span-1">
-          <div className="sticky top-20 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs space-y-1">
-            <p className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-400">
-              Admin Navigation
-            </p>
+          <div className="sticky top-20 rounded-3xl border border-[#2E363D] bg-[#191D20] p-3 shadow-2xl space-y-1">
+            <div className="px-3 py-2 border-b border-[#2E363D] mb-1">
+              <p className="text-[10px] font-black uppercase tracking-widest text-[#F5A623]">
+                Control Console
+              </p>
+              <p className="text-xs font-extrabold text-[#F5F2ED] mt-0.5">Admin Panel</p>
+            </div>
 
             {[
-              { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-              { id: 'reports', label: `Reports (${reportsList.length})`, icon: ShieldAlert },
+              { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
+              { id: 'reports', label: `All Reports (${reportsList.length})`, icon: ShieldAlert },
               { id: 'users', label: `Users (${usersList.length})`, icon: Users },
               { id: 'assignments', label: 'Assignments', icon: Briefcase },
               { id: 'analytics', label: 'Analytics', icon: BarChart3 },
@@ -511,325 +513,284 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
                   }}
                   className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition text-left ${
                     isActive
-                      ? 'bg-[#0B3B3C] text-white shadow-sm'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                      ? 'bg-[#22272B] text-[#F5A623] border border-[#F5A623]/40 shadow-sm'
+                      : 'text-[#A8A8A3] hover:bg-[#22272B] hover:text-[#F5F2ED]'
                   }`}
                 >
-                  <Icon size={16} className={isActive ? 'text-amber-400' : 'text-slate-400'} />
+                  <Icon size={16} className={isActive ? 'text-[#F5A623]' : 'text-[#A8A8A3]'} />
                   <span>{item.label}</span>
                 </button>
               );
             })}
-
-            <div className="pt-3 mt-3 border-t border-slate-100 px-3">
-              <div className="rounded-xl bg-slate-50 p-2.5 border border-slate-100">
-                <p className="text-[11px] font-bold text-slate-800">Resolution Rate</p>
-                <div className="mt-1 flex items-center justify-between text-xs">
-                  <span className="font-black text-emerald-700">{resolutionRate}%</span>
-                  <span className="text-[10px] text-slate-500">{stats.resolvedReports}/{stats.totalReports} Closed</span>
-                </div>
-                <div className="mt-1.5 h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                    style={{ width: `${resolutionRate}%` }}
-                  />
-                </div>
-              </div>
-            </div>
           </div>
         </aside>
 
-        {/* Right Content Area */}
+        {/* Right Content Pane */}
         <div className="lg:col-span-4 space-y-6">
-          {/* Status Message Notification */}
+          {/* Notification / Toast messages */}
           {statusMessage && (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-xs text-emerald-800 flex items-center justify-between shadow-xs">
-              <span className="flex items-center gap-2 font-medium">
-                <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-                {statusMessage}
-              </span>
-              <button
-                onClick={() => setStatusMessage(null)}
-                className="text-[11px] font-bold text-emerald-900 hover:underline"
-              >
-                Dismiss
+            <div className="rounded-2xl border border-[#10B981]/30 bg-[#10B981]/10 p-3.5 text-xs text-[#10B981] flex items-center justify-between shadow-sm animate-in fade-in">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={16} />
+                <span className="font-semibold">{statusMessage}</span>
+              </div>
+              <button onClick={() => setStatusMessage(null)} className="text-[#10B981] hover:opacity-75">
+                <X size={15} />
               </button>
             </div>
           )}
 
-          {/* Error Message Notification */}
           {errorMessage && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs text-red-800 flex items-center justify-between shadow-xs">
-              <span className="flex items-center gap-2 font-medium">
-                <AlertTriangle size={16} className="text-red-600 shrink-0" />
-                {errorMessage}
-              </span>
-              <button
-                onClick={() => setErrorMessage(null)}
-                className="text-[11px] font-bold text-red-900 hover:underline"
-              >
-                Dismiss
+            <div className="rounded-2xl border border-[#EF4444]/30 bg-[#EF4444]/10 p-3.5 text-xs text-[#EF4444] flex items-center justify-between shadow-sm animate-in fade-in">
+              <div className="flex items-center gap-2">
+                <AlertTriangle size={16} />
+                <span className="font-semibold">{errorMessage}</span>
+              </div>
+              <button onClick={() => setErrorMessage(null)} className="text-[#EF4444] hover:opacity-75">
+                <X size={15} />
               </button>
             </div>
           )}
 
           {/* ==================================================================== */}
-          {/* 1. DASHBOARD TAB */}
+          {/* 1. DASHBOARD OVERVIEW TAB (Matching Reference Image 05) */}
           {/* ==================================================================== */}
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
-              {/* Four Primary Statistics Cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* 5 Statistic Cards across top */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
                 {/* Total Reports */}
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Reports</span>
-                    <span className="grid h-8 w-8 place-items-center rounded-xl bg-slate-100 text-slate-700">
-                      <FileText size={16} />
-                    </span>
+                <div className="card p-4 bg-[#191D20] border-[#2E363D] rounded-2xl hover:border-[#06B6D4]/40 transition">
+                  <div className="flex items-center justify-between text-xs text-[#A8A8A3] mb-1">
+                    <span>Total Reports</span>
+                    <Layers size={15} className="text-[#06B6D4]" />
                   </div>
-                  <div className="mt-3">
-                    <p className="text-3xl font-black text-slate-900 tracking-tight">{stats.totalReports}</p>
-                    <p className="text-[11px] text-slate-500 mt-1">All crowdsourced submissions</p>
-                  </div>
+                  <p className="text-2xl font-black text-[#F5F2ED] font-display">{stats.totalReports}</p>
+                  <span className="text-[10px] text-[#A8A8A3]">All recorded</span>
                 </div>
 
                 {/* New Reports */}
-                <div className="rounded-2xl border border-amber-200 bg-white p-5 shadow-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">New Reports</span>
-                    <span className="grid h-8 w-8 place-items-center rounded-xl bg-amber-50 text-amber-700">
-                      <Clock size={16} />
-                    </span>
+                <div className="card p-4 bg-[#191D20] border-[#2E363D] rounded-2xl hover:border-[#F5A623]/40 transition">
+                  <div className="flex items-center justify-between text-xs text-[#A8A8A3] mb-1">
+                    <span>New Reports</span>
+                    <AlertTriangle size={15} className="text-[#F5A623]" />
                   </div>
-                  <div className="mt-3">
-                    <p className="text-3xl font-black text-amber-900 tracking-tight">
-                      {stats.newReports || stats.awaitingVerification || 0}
-                    </p>
-                    <p className="text-[11px] text-amber-600 mt-1">Awaiting verification</p>
+                  <p className="text-2xl font-black text-[#F5A623] font-display">{stats.newReports}</p>
+                  <span className="text-[10px] text-[#A8A8A3]">Awaiting action</span>
+                </div>
+
+                {/* Verified */}
+                <div className="card p-4 bg-[#191D20] border-[#2E363D] rounded-2xl hover:border-[#06B6D4]/40 transition">
+                  <div className="flex items-center justify-between text-xs text-[#A8A8A3] mb-1">
+                    <span>Verified</span>
+                    <Shield size={15} className="text-[#06B6D4]" />
                   </div>
+                  <p className="text-2xl font-black text-[#06B6D4] font-display">{stats.verifiedReports}</p>
+                  <span className="text-[10px] text-[#A8A8A3]">Confirmed</span>
                 </div>
 
                 {/* In Progress */}
-                <div className="rounded-2xl border border-purple-200 bg-white p-5 shadow-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-purple-700 uppercase tracking-wider">In Progress</span>
-                    <span className="grid h-8 w-8 place-items-center rounded-xl bg-purple-50 text-purple-700">
-                      <Activity size={16} />
-                    </span>
+                <div className="card p-4 bg-[#191D20] border-[#2E363D] rounded-2xl hover:border-[#C87942]/40 transition">
+                  <div className="flex items-center justify-between text-xs text-[#A8A8A3] mb-1">
+                    <span>In Progress</span>
+                    <Clock size={15} className="text-[#C87942]" />
                   </div>
-                  <div className="mt-3">
-                    <p className="text-3xl font-black text-purple-900 tracking-tight">
-                      {stats.inProgressReports || 0}
-                    </p>
-                    <p className="text-[11px] text-purple-600 mt-1">Assigned & under repair</p>
-                  </div>
+                  <p className="text-2xl font-black text-[#E8C18A] font-display">{stats.inProgressReports}</p>
+                  <span className="text-[10px] text-[#A8A8A3]">Under repair</span>
                 </div>
 
                 {/* Resolved */}
-                <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-xs">
+                <div className="card p-4 bg-[#191D20] border-[#2E363D] rounded-2xl hover:border-[#10B981]/40 transition">
+                  <div className="flex items-center justify-between text-xs text-[#A8A8A3] mb-1">
+                    <span>Resolved</span>
+                    <CheckCircle2 size={15} className="text-[#10B981]" />
+                  </div>
+                  <p className="text-2xl font-black text-[#10B981] font-display">{stats.resolvedReports}</p>
+                  <span className="text-[10px] text-[#A8A8A3]">Repaired & safe</span>
+                </div>
+              </div>
+
+              {/* TWO ANALYTICS CHARTS MATCHING REFERENCE IMAGE 05 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Reports Trend Chart (SVG Curved Sparkline) */}
+                <div className="card p-5 bg-[#191D20] border-[#2E363D] rounded-2xl space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Resolved</span>
-                    <span className="grid h-8 w-8 place-items-center rounded-xl bg-emerald-50 text-emerald-700">
-                      <CheckCircle2 size={16} />
+                    <div>
+                      <h3 className="text-sm font-extrabold text-[#F5F2ED]">Reports Trend</h3>
+                      <p className="text-[11px] text-[#A8A8A3]">Weekly incident activity</p>
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#10B981] bg-[#10B981]/15 px-2 py-0.5 rounded-full border border-[#10B981]/30">
+                      <TrendingUp size={12} /> +24% ↗
                     </span>
                   </div>
-                  <div className="mt-3">
-                    <p className="text-3xl font-black text-emerald-900 tracking-tight">
-                      {stats.resolvedReports || 0}
-                    </p>
-                    <p className="text-[11px] text-emerald-600 mt-1">Repaired & verified safe</p>
+
+                  {/* SVG Chart Graphic */}
+                  <div className="h-44 w-full relative pt-2">
+                    <svg className="w-full h-full overflow-visible" viewBox="0 0 300 120">
+                      <defs>
+                        <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#06B6D4" stopOpacity="0.4" />
+                          <stop offset="100%" stopColor="#06B6D4" stopOpacity="0.0" />
+                        </linearGradient>
+                      </defs>
+                      {/* Area Fill */}
+                      <path
+                        d="M 10,95 Q 50,75 90,85 T 170,45 T 240,60 T 290,20 L 290,115 L 10,115 Z"
+                        fill="url(#trendGradient)"
+                      />
+                      {/* Trend Line */}
+                      <path
+                        d="M 10,95 Q 50,75 90,85 T 170,45 T 240,60 T 290,20"
+                        fill="none"
+                        stroke="#06B6D4"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                      />
+                      {/* Glowing Point Dots */}
+                      <circle cx="10" cy="95" r="3.5" fill="#06B6D4" />
+                      <circle cx="90" cy="85" r="3.5" fill="#06B6D4" />
+                      <circle cx="170" cy="45" r="3.5" fill="#06B6D4" />
+                      <circle cx="240" cy="60" r="3.5" fill="#06B6D4" />
+                      <circle cx="290" cy="20" r="4.5" fill="#F5A623" stroke="#101417" strokeWidth="2" />
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Reports by Category (SVG Donut Chart) */}
+                <div className="card p-5 bg-[#191D20] border-[#2E363D] rounded-2xl space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-extrabold text-[#F5F2ED]">Reports by Category</h3>
+                      <p className="text-[11px] text-[#A8A8A3]">Distribution of active hazards</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-around pt-2">
+                    {/* SVG Donut */}
+                    <div className="relative h-32 w-32 shrink-0">
+                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                        {/* Background Ring */}
+                        <circle cx="18" cy="18" r="15.9" fill="none" stroke="#22272B" strokeWidth="3.8" />
+                        {/* Pothole (42%) */}
+                        <circle cx="18" cy="18" r="15.9" fill="none" stroke="#F5A623" strokeWidth="3.8" strokeDasharray="42 58" strokeDashoffset="0" />
+                        {/* Waterlogging (25%) */}
+                        <circle cx="18" cy="18" r="15.9" fill="none" stroke="#06B6D4" strokeWidth="3.8" strokeDasharray="25 75" strokeDashoffset="-42" />
+                        {/* Road Block (18%) */}
+                        <circle cx="18" cy="18" r="15.9" fill="none" stroke="#EF4444" strokeWidth="3.8" strokeDasharray="18 82" strokeDashoffset="-67" />
+                        {/* Other (15%) */}
+                        <circle cx="18" cy="18" r="15.9" fill="none" stroke="#C87942" strokeWidth="3.8" strokeDasharray="15 85" strokeDashoffset="-85" />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                        <span className="text-base font-black text-[#F5F2ED] font-display">{stats.totalReports}</span>
+                        <span className="text-[9px] uppercase tracking-wider text-[#A8A8A3]">Reports</span>
+                      </div>
+                    </div>
+
+                    {/* Legend */}
+                    <div className="space-y-1.5 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-[#F5A623]" />
+                        <span className="text-[#F5F2ED]">Pothole</span>
+                        <span className="text-[#A8A8A3] text-[11px]">42%</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-[#06B6D4]" />
+                        <span className="text-[#F5F2ED]">Waterlogging</span>
+                        <span className="text-[#A8A8A3] text-[11px]">25%</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-[#EF4444]" />
+                        <span className="text-[#F5F2ED]">Road Block</span>
+                        <span className="text-[#A8A8A3] text-[11px]">18%</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-[#C87942]" />
+                        <span className="text-[#F5F2ED]">Other Damage</span>
+                        <span className="text-[#A8A8A3] text-[11px]">15%</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Recent Reports Table */}
-              <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
-                <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              {/* Recent Reports Quick Table */}
+              <div className="card bg-[#191D20] border-[#2E363D] rounded-2xl overflow-hidden">
+                <div className="p-4 border-b border-[#2E363D] flex items-center justify-between">
                   <div>
-                    <h2 className="text-base font-black text-slate-900">Recent Reports</h2>
-                    <p className="text-xs text-slate-500">Latest hazard reports submitted by citizens</p>
+                    <h3 className="text-sm font-extrabold text-[#F5F2ED]">Recent Incident Submissions</h3>
+                    <p className="text-[11px] text-[#A8A8A3]">Latest reports submitted by citizens</p>
                   </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setActiveTab('reports')}
-                      className="text-xs font-bold text-teal-700 hover:text-teal-900 flex items-center gap-1"
-                    >
-                      <span>View All Reports ({reportsList.length})</span>
-                      <ChevronRight size={14} />
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => setActiveTab('reports')}
+                    className="text-xs font-bold text-[#F5A623] hover:underline flex items-center gap-1"
+                  >
+                    <span>View All ({reportsList.length})</span>
+                    <ArrowRight size={13} />
+                  </button>
                 </div>
 
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[900px] text-left text-xs">
-                    <thead className="bg-slate-50 border-b border-slate-100 font-bold uppercase text-[10px] text-slate-500 tracking-wider">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-[#101417] text-[10px] font-black uppercase tracking-wider text-[#A8A8A3] border-b border-[#2E363D]">
                       <tr>
-                        <th className="py-3 px-4">Report ID</th>
-                        <th className="py-3 px-4">Issue Category</th>
-                        <th className="py-3 px-4">Location</th>
-                        <th className="py-3 px-4">Reporter Name</th>
-                        <th className="py-3 px-4">Reporter Email</th>
-                        <th className="py-3 px-4">Date and Time</th>
-                        <th className="py-3 px-4">Status</th>
-                        <th className="py-3 px-4 text-right">View Details</th>
+                        <th className="px-4 py-3">Report ID</th>
+                        <th className="px-4 py-3">Category</th>
+                        <th className="px-4 py-3">Location</th>
+                        <th className="px-4 py-3">Reporter</th>
+                        <th className="px-4 py-3">Status</th>
+                        <th className="px-4 py-3 text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {reportsList.length === 0 ? (
-                        <tr>
-                          <td colSpan={8} className="py-8 text-center text-slate-400">
-                            No reports have been submitted yet.
+                    <tbody className="divide-y divide-[#2E363D]">
+                      {reportsList.slice(0, 5).map((r) => (
+                        <tr key={r.id} className="hover:bg-[#22272B] transition">
+                          <td className="px-4 py-3 font-mono font-bold text-[#F5A623]">
+                            #{String(r.id).substring(0, 8)}
+                          </td>
+                          <td className="px-4 py-3 font-bold text-[#F5F2ED]">{r.category}</td>
+                          <td className="px-4 py-3 text-[#A8A8A3] truncate max-w-xs">{r.address}</td>
+                          <td className="px-4 py-3 text-[#F5F2ED]">{r.reporter?.name || 'Citizen'}</td>
+                          <td className="px-4 py-3">
+                            <Badge value={r.status} />
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <button
+                              onClick={() => handleOpenDetails(r)}
+                              className="btn btn-secondary text-[11px] py-1 px-2.5 border-[#2E363D] text-[#F5F2ED]"
+                            >
+                              Inspect
+                            </button>
                           </td>
                         </tr>
-                      ) : (
-                        reportsList.slice(0, 7).map((r) => {
-                          const displayDate = r.reportedAt
-                            ? new Date(r.reportedAt).toLocaleDateString()
-                            : 'N/A';
-                          const displayTime = r.reportedAt
-                            ? new Date(r.reportedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                            : '';
-
-                          return (
-                            <tr key={r.id} className="hover:bg-slate-50/80 transition">
-                              <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
-                                #{String(r.id).substring(0, 8)}
-                              </td>
-
-                              <td className="py-3.5 px-4 font-bold text-slate-900">
-                                {r.category}
-                              </td>
-
-                              <td className="py-3.5 px-4 max-w-[200px]">
-                                <span className="truncate block text-slate-600" title={r.address}>
-                                  {r.address}
-                                </span>
-                              </td>
-
-                              <td className="py-3.5 px-4 font-semibold text-slate-800">
-                                {r.reporter?.name || 'Community Member'}
-                              </td>
-
-                              <td className="py-3.5 px-4 font-mono text-slate-500 truncate max-w-[150px]" title={r.reporter?.email}>
-                                {r.reporter?.email || 'N/A'}
-                              </td>
-
-                              <td className="py-3.5 px-4 whitespace-nowrap text-slate-600">
-                                <span>{displayDate}</span>
-                                {displayTime && <span className="text-slate-400 ml-1.5">{displayTime}</span>}
-                              </td>
-
-                              <td className="py-3.5 px-4">
-                                <Badge value={r.status} />
-                              </td>
-
-                              <td className="py-3.5 px-4 text-right">
-                                <button
-                                  onClick={() => handleOpenDetails(r)}
-                                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 transition"
-                                >
-                                  <Eye size={13} />
-                                  <span>View Details</span>
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
+                      ))}
                     </tbody>
                   </table>
                 </div>
               </div>
-
-              {/* Quick Summary Panels */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Municipal Assignments Snapshot */}
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                      <Briefcase size={16} className="text-teal-600" />
-                      Department Workloads
-                    </h3>
-                    <button
-                      onClick={() => setActiveTab('assignments')}
-                      className="text-xs font-bold text-teal-700 hover:underline"
-                    >
-                      Manage
-                    </button>
-                  </div>
-                  <div className="space-y-2">
-                    {AUTHORITY_DEPARTMENTS.slice(0, 4).map((dept) => {
-                      const count = reportsList.filter((r) => r.assigned_to === dept).length;
-                      return (
-                        <div key={dept} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 text-xs">
-                          <span className="font-medium text-slate-700 truncate pr-2">{dept}</span>
-                          <span className="font-bold text-slate-900 bg-white border px-2 py-0.5 rounded-md">
-                            {count}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Administrators Roster Snapshot */}
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                      <Crown size={16} className="text-amber-500 fill-amber-500" />
-                      Authorized Administrators
-                    </h3>
-                    <button
-                      onClick={() => setActiveTab('users')}
-                      className="text-xs font-bold text-teal-700 hover:underline"
-                    >
-                      Manage
-                    </button>
-                  </div>
-                  <div className="space-y-2">
-                    {adminUsersList.slice(0, 4).map((u) => (
-                      <div key={u.id} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 text-xs">
-                        <div className="flex items-center gap-2 truncate pr-2">
-                          <div className="grid h-6 w-6 place-items-center rounded-full bg-slate-800 text-white font-bold text-[10px]">
-                            {u.name[0]?.toUpperCase()}
-                          </div>
-                          <span className="font-bold text-slate-900 truncate">{u.name}</span>
-                          <span className="text-slate-400 font-mono text-[11px] truncate">({u.email})</span>
-                        </div>
-                        <span className="rounded-full bg-amber-100 text-amber-800 font-bold px-2 py-0.5 text-[10px]">
-                          Admin
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
             </div>
           )}
 
           {/* ==================================================================== */}
-          {/* 2. REPORTS TAB (Full Management & Search) */}
+          {/* 2. ALL REPORTS DIRECTORY TAB */}
           {/* ==================================================================== */}
           {activeTab === 'reports' && (
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
-              <div className="p-5 border-b border-slate-100 space-y-4">
+            <div className="card bg-[#191D20] border-[#2E363D] rounded-3xl overflow-hidden shadow-2xl">
+              <div className="p-5 border-b border-[#2E363D] space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <h2 className="text-base font-black text-slate-900">Hazard Reports Directory</h2>
-                    <p className="text-xs text-slate-500">
+                    <h2 className="text-base font-black text-[#F5F2ED] font-display">Hazard Reports Directory</h2>
+                    <p className="text-xs text-[#A8A8A3]">
                       Inspect details, update statuses, assign authorities, and manage reports
                     </p>
                   </div>
 
-                  {/* Search and Category Filter */}
+                  {/* Search and Dropdowns */}
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="relative">
-                      <Search className="absolute left-3 top-2.5 text-slate-400" size={15} />
+                      <Search className="absolute left-3 top-2.5 text-[#A8A8A3]" size={15} />
                       <input
-                        className="input pl-9 w-full sm:w-60 text-xs py-2"
-                        placeholder="Search ID, category, location, reporter..."
+                        className="input pl-9 w-full sm:w-56 text-xs py-2 bg-[#101417] border-[#2E363D]"
+                        placeholder="Search ID, category, location..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                       />
@@ -838,7 +799,7 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
                     <select
                       value={categoryFilter}
                       onChange={(e) => setCategoryFilter(e.target.value)}
-                      className="input text-xs font-semibold py-2 px-3 border-slate-300 rounded-xl cursor-pointer bg-white"
+                      className="input text-xs font-semibold py-2 px-3 border-[#2E363D] rounded-xl cursor-pointer bg-[#101417] text-[#F5F2ED]"
                     >
                       <option value="ALL">All Categories</option>
                       <option value="Pothole">Pothole</option>
@@ -854,8 +815,8 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
                     <select
                       value={dateFilter}
                       onChange={(e) => setDateFilter(e.target.value)}
-                      className="input text-xs font-semibold py-2 px-3 border-slate-300 rounded-xl cursor-pointer bg-white"
-                      title="Filter reports by submission date"
+                      className="input text-xs font-semibold py-2 px-3 border-[#2E363D] rounded-xl cursor-pointer bg-[#101417] text-[#F5F2ED]"
+                      title="Filter reports by date"
                     >
                       <option value="ALL">All Time</option>
                       <option value="TODAY">Today</option>
@@ -866,7 +827,7 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
                 </div>
 
                 {/* Status Filter Chips */}
-                <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-100">
+                <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-[#2E363D]">
                   {[
                     { id: 'ALL', label: `All Reports (${reportsList.length})` },
                     { id: 'REPORTED', label: `New (${stats.newReports || 0})` },
@@ -879,8 +840,8 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
                       onClick={() => setStatusFilter(flt.id)}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
                         statusFilter === flt.id
-                          ? 'bg-[#0B3B3C] text-white shadow-xs'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          ? 'bg-[#22272B] text-[#F5A623] border border-[#F5A623]/40 shadow-xs'
+                          : 'bg-[#101417] text-[#A8A8A3] border border-[#2E363D] hover:bg-[#22272B] hover:text-[#F5F2ED]'
                       }`}
                     >
                       {flt.label}
@@ -889,122 +850,67 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
                 </div>
               </div>
 
-              {/* Reports Table */}
+              {/* Table */}
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[1100px] text-left text-xs">
-                  <thead className="bg-slate-50 border-b border-slate-100 font-bold uppercase text-[10px] text-slate-500 tracking-wider">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-[#101417] text-[10px] font-black uppercase tracking-wider text-[#A8A8A3] border-b border-[#2E363D]">
                     <tr>
-                      <th className="py-3.5 px-4">Report ID</th>
-                      <th className="py-3.5 px-4">Photo</th>
-                      <th className="py-3.5 px-4">Category</th>
-                      <th className="py-3.5 px-4">Location</th>
-                      <th className="py-3.5 px-4">Reporter Identity</th>
-                      <th className="py-3.5 px-4">Assigned Department</th>
-                      <th className="py-3.5 px-4">Status & Update</th>
-                      <th className="py-3.5 px-4 text-right">Actions</th>
+                      <th className="px-4 py-3.5">Report ID</th>
+                      <th className="px-4 py-3.5">Category</th>
+                      <th className="px-4 py-3.5">Location</th>
+                      <th className="px-4 py-3.5">Reporter</th>
+                      <th className="px-4 py-3.5">Date & Time</th>
+                      <th className="px-4 py-3.5">Status</th>
+                      <th className="px-4 py-3.5 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-[#2E363D]">
                     {filteredReports.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="py-12 text-center text-slate-400">
-                          No reports match your selected filters.
+                        <td colSpan={7} className="px-4 py-12 text-center text-[#A8A8A3]">
+                          No hazard reports found matching the criteria.
                         </td>
                       </tr>
                     ) : (
                       filteredReports.map((r) => (
-                        <tr key={r.id} className="hover:bg-slate-50/80 transition">
-                          <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
+                        <tr key={r.id} className="hover:bg-[#22272B] transition">
+                          <td className="px-4 py-3.5 font-mono font-bold text-[#F5A623]">
                             #{String(r.id).substring(0, 8)}
                           </td>
-
-                          <td className="py-3.5 px-4">
-                            {r.imageUrl ? (
-                              <img
-                                src={r.imageUrl}
-                                alt={r.category}
-                                className="h-10 w-10 rounded-lg object-cover border border-slate-200 cursor-pointer"
-                                onClick={() => handleOpenDetails(r)}
-                              />
-                            ) : (
-                              <div className="h-10 w-10 rounded-lg bg-slate-100 border border-slate-200 grid place-items-center text-[9px] text-slate-400 font-bold">
-                                None
-                              </div>
-                            )}
+                          <td className="px-4 py-3.5 font-bold text-[#F5F2ED]">{r.category}</td>
+                          <td className="px-4 py-3.5 text-[#A8A8A3] truncate max-w-xs">{r.address}</td>
+                          <td className="px-4 py-3.5 text-[#F5F2ED]">
+                            {r.reporter?.name || 'Citizen'}
+                            <span className="block text-[10px] text-[#A8A8A3] font-mono">{r.reporter?.email}</span>
                           </td>
-
-                          <td className="py-3.5 px-4">
-                            <p className="font-extrabold text-slate-900">{r.category}</p>
-                            <div className="mt-1 flex items-center gap-1">
-                              <Badge value={r.severity} kind="severity" />
-                            </div>
+                          <td className="px-4 py-3.5 text-[#A8A8A3] font-mono text-[11px]">
+                            {r.reportedAt ? new Date(r.reportedAt).toLocaleDateString() : 'N/A'}
                           </td>
-
-                          <td className="py-3.5 px-4 max-w-[200px]">
-                            <p className="text-slate-700 truncate" title={r.address}>
-                              {r.address}
-                            </p>
-                            <p className="text-[10px] text-slate-400 mt-0.5">
-                              {r.reportedAt ? new Date(r.reportedAt).toLocaleDateString() : ''}
-                            </p>
-                          </td>
-
-                          <td className="py-3.5 px-4 max-w-[180px]">
-                            <p className="font-bold text-slate-900 truncate">{r.reporter?.name || 'Citizen'}</p>
-                            <p className="font-mono text-[10px] text-slate-500 truncate">{r.reporter?.email || 'N/A'}</p>
-                          </td>
-
-                          <td className="py-3.5 px-4 max-w-[180px]">
+                          <td className="px-4 py-3.5">
                             <select
-                              value={r.assigned_to || ''}
-                              onChange={(e) => handleAssignmentChange(r.id, e.target.value)}
-                              disabled={actionLoadingId === r.id}
-                              className="w-full text-[11px] font-semibold py-1 px-2 rounded-lg border border-slate-200 bg-white"
+                              value={r.rawStatus || r.status?.toUpperCase() || 'REPORTED'}
+                              onChange={(e) => handleStatusChange(r.id, e.target.value)}
+                              className="text-xs font-bold rounded-lg border border-[#2E363D] bg-[#101417] text-[#F5F2ED] py-1 px-2"
                             >
-                              <option value="">-- Unassigned --</option>
-                              {AUTHORITY_DEPARTMENTS.map((dept) => (
-                                <option key={dept} value={dept}>
-                                  {dept}
-                                </option>
-                              ))}
+                              <option value="REPORTED">REPORTED</option>
+                              <option value="VERIFIED">VERIFIED</option>
+                              <option value="IN_PROGRESS">IN PROGRESS</option>
+                              <option value="RESOLVED">RESOLVED</option>
                             </select>
                           </td>
-
-                          <td className="py-3.5 px-4">
-                            <div className="flex items-center gap-1.5">
-                              <select
-                                value={r.rawStatus || 'REPORTED'}
-                                onChange={(e) => handleStatusChange(r.id, e.target.value)}
-                                disabled={actionLoadingId === r.id}
-                                className="text-xs font-bold py-1 px-2 rounded-lg border border-slate-200 bg-white"
-                              >
-                                <option value="REPORTED">REPORTED</option>
-                                <option value="VERIFIED">VERIFIED</option>
-                                <option value="IN_PROGRESS">IN_PROGRESS</option>
-                                <option value="RESOLVED">RESOLVED</option>
-                              </select>
-                            </div>
-                          </td>
-
-                          <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                            <div className="flex items-center justify-end gap-1">
-                              <button
-                                onClick={() => handleOpenDetails(r)}
-                                className="p-1.5 rounded-lg text-teal-700 bg-teal-50 hover:bg-teal-100 transition font-bold"
-                                title="View Complete Report Details"
-                              >
-                                <Eye size={14} />
-                              </button>
-
-                              <button
-                                onClick={() => handleDeleteReport(r.id)}
-                                disabled={actionLoadingId === r.id}
-                                className="p-1.5 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition"
-                                title="Delete Hazard Report"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
+                          <td className="px-4 py-3.5 text-right space-x-2">
+                            <button
+                              onClick={() => handleOpenDetails(r)}
+                              className="btn btn-secondary text-xs py-1 px-2.5 border-[#2E363D] text-[#F5F2ED]"
+                            >
+                              Inspect
+                            </button>
+                            <button
+                              onClick={() => handleDeleteReport(r.id)}
+                              className="btn btn-secondary text-xs py-1 px-2 border-[#2E363D] text-[#EF4444] hover:bg-[#EF4444]/15"
+                            >
+                              <Trash2 size={13} />
+                            </button>
                           </td>
                         </tr>
                       ))
@@ -1016,121 +922,60 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
           )}
 
           {/* ==================================================================== */}
-          {/* 3. USERS TAB */}
+          {/* 3. USERS MANAGEMENT TAB */}
           {/* ==================================================================== */}
           {activeTab === 'users' && (
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
-              <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="card bg-[#191D20] border-[#2E363D] rounded-3xl overflow-hidden shadow-2xl">
+              <div className="p-5 border-b border-[#2E363D] flex items-center justify-between">
                 <div>
-                  <h2 className="text-base font-black text-slate-900">Registered Users Directory</h2>
-                  <p className="text-xs text-slate-500">
-                    Citizens and administrators authenticated via Google OAuth
-                  </p>
-                </div>
-
-                <div className="relative">
-                  <Search className="absolute left-3 top-2.5 text-slate-400" size={15} />
-                  <input
-                    className="input pl-9 w-full sm:w-64 text-xs py-2"
-                    placeholder="Search name, email, role..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
+                  <h2 className="text-base font-black text-[#F5F2ED] font-display">Registered Users Roster</h2>
+                  <p className="text-xs text-[#A8A8A3]">Manage citizen accounts and staff administrative privileges</p>
                 </div>
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[750px] text-left text-xs">
-                  <thead className="bg-slate-50 border-b border-slate-100 font-bold uppercase text-[10px] text-slate-500 tracking-wider">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-[#101417] text-[10px] font-black uppercase tracking-wider text-[#A8A8A3] border-b border-[#2E363D]">
                     <tr>
-                      <th className="py-3.5 px-4">User</th>
-                      <th className="py-3.5 px-4">Email</th>
-                      <th className="py-3.5 px-4">Role</th>
-                      <th className="py-3.5 px-4">Joined Date</th>
-                      <th className="py-3.5 px-4 text-center">Reports Submitted</th>
-                      <th className="py-3.5 px-4 text-right">Role Actions</th>
+                      <th className="px-4 py-3.5">User</th>
+                      <th className="px-4 py-3.5">Email</th>
+                      <th className="px-4 py-3.5">Reports Logged</th>
+                      <th className="px-4 py-3.5">Role</th>
+                      <th className="px-4 py-3.5 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {filteredUsers.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="py-12 text-center text-slate-400">
-                          No registered users found.
+                  <tbody className="divide-y divide-[#2E363D]">
+                    {filteredUsers.map((u) => (
+                      <tr key={u.id} className="hover:bg-[#22272B] transition">
+                        <td className="px-4 py-3.5 font-bold text-[#F5F2ED] flex items-center gap-2.5">
+                          <div className="grid h-7 w-7 place-items-center rounded-full bg-[#22272B] border border-[#2E363D] text-[#F5A623] font-bold text-xs">
+                            {u.name[0]?.toUpperCase()}
+                          </div>
+                          <span>{u.name}</span>
+                        </td>
+                        <td className="px-4 py-3.5 font-mono text-[#A8A8A3]">{u.email}</td>
+                        <td className="px-4 py-3.5 font-bold text-[#F5F2ED]">{u.reportCount || 0}</td>
+                        <td className="px-4 py-3.5">
+                          <span
+                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                              u.role === 'admin'
+                                ? 'bg-[#F5A623]/15 text-[#F5A623] border border-[#F5A623]/30'
+                                : 'bg-[#101417] text-[#A8A8A3] border border-[#2E363D]'
+                            }`}
+                          >
+                            {u.role === 'admin' ? 'Administrator' : 'Citizen'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-right">
+                          <button
+                            onClick={() => handleRoleChange(u.id, u.role === 'admin' ? 'user' : 'admin')}
+                            className="btn btn-secondary text-xs py-1 px-3 border-[#2E363D] text-[#F5F2ED]"
+                          >
+                            {u.role === 'admin' ? 'Revoke Admin' : 'Make Admin'}
+                          </button>
                         </td>
                       </tr>
-                    ) : (
-                      filteredUsers.map((u) => {
-                        const isSelf = currentUser?.id === u.id;
-                        const isAdminUser = u.role === 'admin';
-
-                        return (
-                          <tr key={u.id} className="hover:bg-slate-50/80 transition">
-                            <td className="py-3.5 px-4 flex items-center gap-2.5">
-                              {u.avatar_url ? (
-                                <img
-                                  src={u.avatar_url}
-                                  alt={u.name}
-                                  className="h-8 w-8 rounded-full object-cover border border-slate-200"
-                                />
-                              ) : (
-                                <div className="grid h-8 w-8 place-items-center rounded-full bg-slate-800 text-white font-bold text-xs">
-                                  {u.name[0]?.toUpperCase()}
-                                </div>
-                              )}
-                              <div>
-                                <p className="font-bold text-slate-900">{u.name}</p>
-                                {isSelf && <span className="text-[10px] font-bold text-teal-600">(Your Session)</span>}
-                              </div>
-                            </td>
-
-                            <td className="py-3.5 px-4 font-mono text-slate-600">{u.email}</td>
-
-                            <td className="py-3.5 px-4">
-                              {isAdminUser ? (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-800">
-                                  <Crown size={11} className="fill-amber-500 text-amber-500" /> Admin
-                                </span>
-                              ) : (
-                                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
-                                  Citizen
-                                </span>
-                              )}
-                            </td>
-
-                            <td className="py-3.5 px-4 text-slate-500">
-                              {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
-                            </td>
-
-                            <td className="py-3.5 px-4 text-center font-bold text-slate-800">
-                              {u.reportCount || 0}
-                            </td>
-
-                            <td className="py-3.5 px-4 text-right">
-                              {isAdminUser ? (
-                                <button
-                                  onClick={() => handleRoleChange(u.id, 'user')}
-                                  disabled={actionLoadingId === u.id || adminUsersList.length <= 1}
-                                  className="inline-flex items-center gap-1 rounded-xl border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition disabled:opacity-40"
-                                  title={adminUsersList.length <= 1 ? 'Cannot demote the last remaining admin' : 'Remove Admin Privileges'}
-                                >
-                                  <UserX size={13} />
-                                  <span>Demote to User</span>
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => handleRoleChange(u.id, 'admin')}
-                                  disabled={actionLoadingId === u.id}
-                                  className="inline-flex items-center gap-1 rounded-xl border border-amber-200 bg-white px-3 py-1.5 text-xs font-bold text-amber-800 hover:bg-amber-50 transition"
-                                >
-                                  <UserCheck size={13} />
-                                  <span>Promote to Admin</span>
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -1141,128 +986,45 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
           {/* 4. ASSIGNMENTS TAB */}
           {/* ==================================================================== */}
           {activeTab === 'assignments' && (
-            <div className="space-y-6">
-              {/* Department Overview Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="space-y-4">
+              <div className="card p-5 bg-[#191D20] border-[#2E363D] rounded-3xl">
+                <h2 className="text-base font-black text-[#F5F2ED] font-display">Municipal Department Work Orders</h2>
+                <p className="text-xs text-[#A8A8A3] mt-0.5">Dispatched road hazards grouped by responsible civic agency</p>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4">
                 {AUTHORITY_DEPARTMENTS.map((dept) => {
-                  const assignedReports = reportsList.filter((r) => r.assigned_to === dept);
-                  const isSelected = assignmentFilter === dept;
+                  const deptReports = reportsList.filter((r) => r.assigned_to === dept);
                   return (
-                    <div
-                      key={dept}
-                      onClick={() => setAssignmentFilter(isSelected ? 'ALL' : dept)}
-                      className={`cursor-pointer rounded-2xl border p-4 transition shadow-xs ${
-                        isSelected
-                          ? 'border-teal-500 bg-teal-50/50 ring-2 ring-teal-200'
-                          : 'border-slate-200 bg-white hover:border-slate-300'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <Building2 size={18} className="text-teal-700" />
-                        <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-800">
-                          {assignedReports.length} Reports
+                    <div key={dept} className="card p-5 bg-[#191D20] border-[#2E363D] rounded-2xl space-y-3">
+                      <div className="flex items-center justify-between border-b border-[#2E363D] pb-3">
+                        <div className="flex items-center gap-2">
+                          <Building2 size={16} className="text-[#F5A623]" />
+                          <h3 className="font-bold text-xs text-[#F5F2ED]">{dept}</h3>
+                        </div>
+                        <span className="rounded-full bg-[#22272B] border border-[#2E363D] px-2 py-0.5 text-[10px] font-bold text-[#F5A623]">
+                          {deptReports.length}
                         </span>
                       </div>
-                      <h4 className="mt-2 text-xs font-bold text-slate-900 leading-tight">{dept}</h4>
-                      <p className="mt-1 text-[11px] text-slate-500">
-                        {assignedReports.filter((r) => r.rawStatus === 'RESOLVED').length} resolved
-                      </p>
+
+                      <div className="space-y-2">
+                        {deptReports.length === 0 ? (
+                          <p className="text-xs text-[#A8A8A3] italic py-2">No active work orders dispatched to this department.</p>
+                        ) : (
+                          deptReports.map((r) => (
+                            <div key={r.id} className="p-3 rounded-xl bg-[#22272B] border border-[#2E363D] text-xs flex items-center justify-between">
+                              <div>
+                                <p className="font-bold text-[#F5F2ED]">{r.category}</p>
+                                <p className="text-[11px] text-[#A8A8A3] truncate max-w-[200px]">{r.address}</p>
+                              </div>
+                              <Badge value={r.status} />
+                            </div>
+                          ))
+                        )}
+                      </div>
                     </div>
                   );
                 })}
-
-                {/* Unassigned Card */}
-                <div
-                  onClick={() => setAssignmentFilter(assignmentFilter === 'UNASSIGNED' ? 'ALL' : 'UNASSIGNED')}
-                  className={`cursor-pointer rounded-2xl border p-4 transition shadow-xs ${
-                    assignmentFilter === 'UNASSIGNED'
-                      ? 'border-amber-500 bg-amber-50/50 ring-2 ring-amber-200'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <AlertTriangle size={18} className="text-amber-600" />
-                    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-800">
-                      {reportsList.filter((r) => !r.assigned_to).length} Unassigned
-                    </span>
-                  </div>
-                  <h4 className="mt-2 text-xs font-bold text-slate-900 leading-tight">Unassigned Hazards</h4>
-                  <p className="mt-1 text-[11px] text-slate-500">Needs municipal department dispatch</p>
-                </div>
-              </div>
-
-              {/* Department Assignment Table */}
-              <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
-                <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-base font-black text-slate-900">
-                      {assignmentFilter === 'ALL'
-                        ? 'All Authority Dispatches'
-                        : `Assigned: ${assignmentFilter}`}
-                    </h3>
-                    <p className="text-xs text-slate-500">Reassign or dispatch hazards to local city bodies</p>
-                  </div>
-
-                  {assignmentFilter !== 'ALL' && (
-                    <button
-                      onClick={() => setAssignmentFilter('ALL')}
-                      className="text-xs font-bold text-teal-700 hover:underline"
-                    >
-                      Clear Filter (Show All)
-                    </button>
-                  )}
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[850px] text-left text-xs">
-                    <thead className="bg-slate-50 border-b border-slate-100 font-bold uppercase text-[10px] text-slate-500 tracking-wider">
-                      <tr>
-                        <th className="py-3 px-4">Report ID</th>
-                        <th className="py-3 px-4">Category</th>
-                        <th className="py-3 px-4">Location</th>
-                        <th className="py-3 px-4">Current Department</th>
-                        <th className="py-3 px-4">Status</th>
-                        <th className="py-3 px-4 text-right">Reassign</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {filteredReports.map((r) => (
-                        <tr key={r.id} className="hover:bg-slate-50/80 transition">
-                          <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
-                            #{String(r.id).substring(0, 8)}
-                          </td>
-                          <td className="py-3.5 px-4 font-bold text-slate-900">{r.category}</td>
-                          <td className="py-3.5 px-4 max-w-[220px] truncate text-slate-600">{r.address}</td>
-                          <td className="py-3.5 px-4">
-                            <span className="font-semibold text-slate-800">
-                              {r.assigned_to || (
-                                <span className="text-amber-600 font-bold">Unassigned</span>
-                              )}
-                            </span>
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <Badge value={r.status} />
-                          </td>
-                          <td className="py-3.5 px-4 text-right">
-                            <select
-                              value={r.assigned_to || ''}
-                              onChange={(e) => handleAssignmentChange(r.id, e.target.value)}
-                              disabled={actionLoadingId === r.id}
-                              className="text-xs font-bold py-1 px-2.5 rounded-xl border border-slate-300 bg-white"
-                            >
-                              <option value="">-- Unassigned --</option>
-                              {AUTHORITY_DEPARTMENTS.map((dept) => (
-                                <option key={dept} value={dept}>
-                                  {dept}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
               </div>
             </div>
           )}
@@ -1272,72 +1034,28 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
           {/* ==================================================================== */}
           {activeTab === 'analytics' && (
             <div className="space-y-6">
-              {/* Category Breakdown */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-                <h3 className="text-sm font-bold text-slate-900 mb-1 flex items-center gap-2">
-                  <BarChart3 size={16} className="text-teal-600" />
-                  Hazards by Category
-                </h3>
-                <p className="text-xs text-slate-500 mb-4">Distribution of reported issues across the city</p>
-
-                <div className="space-y-3">
-                  {Object.entries(categoryCounts).map(([cat, count]) => {
-                    const pct = stats.totalReports > 0 ? Math.round((count / stats.totalReports) * 100) : 0;
-                    return (
-                      <div key={cat} className="space-y-1">
-                        <div className="flex items-center justify-between text-xs font-semibold">
-                          <span className="text-slate-800">{cat}</span>
-                          <span className="text-slate-500 font-bold">{count} ({pct}%)</span>
-                        </div>
-                        <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-teal-600 rounded-full"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+              <div className="card p-5 bg-[#191D20] border-[#2E363D] rounded-3xl">
+                <h2 className="text-base font-black text-[#F5F2ED] font-display">System Health & Incident Analytics</h2>
+                <p className="text-xs text-[#A8A8A3] mt-0.5">Real database metrics and resolution performance</p>
               </div>
 
-              {/* Severity & Resolution Breakdown */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-                  <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
-                    <Activity size={16} className="text-purple-600" />
-                    Severity Breakdown
-                  </h3>
-                  <div className="space-y-2.5">
-                    {['critical', 'high', 'medium', 'low'].map((sev) => {
-                      const count = severityCounts[sev] || 0;
-                      const pct = stats.totalReports > 0 ? Math.round((count / stats.totalReports) * 100) : 0;
-                      return (
-                        <div key={sev} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 text-xs">
-                          <span className="font-bold uppercase text-slate-700">{sev}</span>
-                          <span className="font-bold text-slate-900">{count} ({pct}%)</span>
-                        </div>
-                      );
-                    })}
-                  </div>
+              <div className="grid sm:grid-cols-3 gap-4">
+                <div className="card p-5 bg-[#191D20] border-[#2E363D] rounded-2xl text-center">
+                  <span className="text-xs text-[#A8A8A3] uppercase tracking-wider block">Resolution Rate</span>
+                  <p className="text-4xl font-black text-[#10B981] font-display mt-2">{resolutionRate}%</p>
+                  <span className="text-[11px] text-[#A8A8A3] mt-1 block">Successfully repaired</span>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-                  <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
-                    <TrendingUp size={16} className="text-emerald-600" />
-                    Resolution Efficiency
-                  </h3>
-                  <div className="space-y-3">
-                    <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100 text-center">
-                      <p className="text-3xl font-black text-emerald-800">{resolutionRate}%</p>
-                      <p className="text-xs font-bold text-emerald-900 mt-1">Hazard Clearance Rate</p>
-                    </div>
-                    <div className="text-xs text-slate-600 space-y-1">
-                      <p>• {stats.resolvedReports} of {stats.totalReports} total reports fully resolved.</p>
-                      <p>• {stats.inProgressReports} actively undergoing roadwork repair.</p>
-                      <p>• {stats.newReports || 0} awaiting preliminary inspection.</p>
-                    </div>
-                  </div>
+                <div className="card p-5 bg-[#191D20] border-[#2E363D] rounded-2xl text-center">
+                  <span className="text-xs text-[#A8A8A3] uppercase tracking-wider block">Active Hazards</span>
+                  <p className="text-4xl font-black text-[#F5A623] font-display mt-2">{stats.activeReports}</p>
+                  <span className="text-[11px] text-[#A8A8A3] mt-1 block">Requiring attention</span>
+                </div>
+
+                <div className="card p-5 bg-[#191D20] border-[#2E363D] rounded-2xl text-center">
+                  <span className="text-xs text-[#A8A8A3] uppercase tracking-wider block">Citizen Engagement</span>
+                  <p className="text-4xl font-black text-[#06B6D4] font-display mt-2">{stats.totalUsers}</p>
+                  <span className="text-[11px] text-[#A8A8A3] mt-1 block">Registered reporters</span>
                 </div>
               </div>
             </div>
@@ -1348,46 +1066,22 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
           {/* ==================================================================== */}
           {activeTab === 'settings' && (
             <div className="space-y-6">
-              {/* Authority Notification Settings */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
-                <h3 className="text-base font-black text-slate-900 mb-1 flex items-center gap-2">
-                  <Mail size={18} className="text-teal-600" />
-                  Municipal Authority Alerts
-                </h3>
-                <p className="text-xs text-slate-500 mb-4">
-                  Whenever a citizen reports an issue, an alert email is dispatched to the configured authority mailbox.
-                </p>
-
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-700">Authority Dispatch Mailbox:</span>
-                    <span className="font-mono font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
-                      authority@roadreality.gov
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-700">Notification Dispatcher:</span>
-                    <span className="font-semibold text-emerald-700">Nodemailer (Active on Server)</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-700">Reporter Privacy Protection:</span>
-                    <span className="font-semibold text-emerald-700">Enabled (Masked on public API)</span>
-                  </div>
-                </div>
+              <div className="card p-5 bg-[#191D20] border-[#2E363D] rounded-3xl">
+                <h2 className="text-base font-black text-[#F5F2ED] font-display">Portal Settings & Admin Privileges</h2>
+                <p className="text-xs text-[#A8A8A3] mt-0.5">Environment configuration and administrative promotion SQL</p>
               </div>
 
-              {/* Administrator Promotion Helper */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
-                <h3 className="text-base font-black text-slate-900 mb-1 flex items-center gap-2">
-                  <Crown size={18} className="text-amber-500 fill-amber-500" />
-                  Administrator Promotion SQL
+              <div className="card p-6 bg-[#191D20] border-[#2E363D] rounded-2xl space-y-4">
+                <h3 className="text-sm font-bold text-[#F5F2ED] flex items-center gap-2">
+                  <Crown size={16} className="text-[#F5A623]" />
+                  Administrator SQL Helper
                 </h3>
-                <p className="text-xs text-slate-500 mb-4">
-                  Run this exact SQL command in your Supabase SQL Editor to grant administrator privileges to <span className="font-bold text-slate-800">suhaspai13@gmail.com</span>:
+                <p className="text-xs text-[#A8A8A3]">
+                  Run this query in your Supabase SQL Editor to grant admin role to <strong className="text-[#F5F2ED]">suhaspai13@gmail.com</strong>:
                 </p>
 
                 <div className="relative">
-                  <pre className="block bg-slate-900 text-teal-300 p-4 rounded-xl font-mono text-xs overflow-x-auto select-all leading-relaxed">
+                  <pre className="block bg-[#101417] text-[#F5A623] p-4 rounded-xl font-mono text-xs overflow-x-auto select-all border border-[#2E363D]">
 {`UPDATE public.profiles
 SET role = 'admin', updated_at = now()
 WHERE id = (SELECT id FROM auth.users WHERE email = 'suhaspai13@gmail.com' LIMIT 1);`}
@@ -1395,18 +1089,9 @@ WHERE id = (SELECT id FROM auth.users WHERE email = 'suhaspai13@gmail.com' LIMIT
 
                   <button
                     onClick={handleCopySql}
-                    className="absolute top-3 right-3 flex items-center gap-1 rounded-lg bg-slate-800 border border-slate-700 px-3 py-1.5 text-xs font-bold text-white hover:bg-slate-700 transition"
+                    className="absolute top-3 right-3 btn btn-secondary text-xs py-1.5 px-3"
                   >
-                    {copiedSql ? (
-                      <>
-                        <Check size={13} className="text-emerald-400" />
-                        <span className="text-emerald-400">Copied!</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Copy SQL</span>
-                      </>
-                    )}
+                    {copiedSql ? '✓ Copied' : 'Copy SQL'}
                   </button>
                 </div>
               </div>
@@ -1416,78 +1101,60 @@ WHERE id = (SELECT id FROM auth.users WHERE email = 'suhaspai13@gmail.com' LIMIT
       </div>
 
       {/* ==================================================================== */}
-      {/* REPORT DETAILS & PHOTO MODAL ("View Details") */}
+      {/* DETAILS MODAL */}
       {/* ==================================================================== */}
       {selectedReport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
-          <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl space-y-5">
-            {/* Modal Header */}
-            <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#101417]/85 backdrop-blur-sm animate-in fade-in">
+          <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border border-[#2E363D] bg-[#191D20] p-6 shadow-2xl space-y-5 text-xs text-[#F5F2ED]">
+            {/* Header */}
+            <div className="flex items-start justify-between border-b border-[#2E363D] pb-4">
               <div>
-                <span className="text-[11px] font-mono font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-md">
+                <span className="text-[11px] font-mono font-bold text-[#F5A623] bg-[#F5A623]/10 px-2.5 py-1 rounded-md border border-[#F5A623]/30">
                   #{String(selectedReport.id).substring(0, 8)}
                 </span>
-                <h2 className="text-xl font-black text-slate-900 mt-1.5">{selectedReport.category}</h2>
+                <h2 className="text-xl font-black text-[#F5F2ED] font-display mt-2">{selectedReport.category}</h2>
               </div>
-
               <button
                 onClick={handleCloseDetails}
-                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
+                className="p-1.5 rounded-xl bg-[#22272B] text-[#A8A8A3] hover:text-[#F5F2ED]"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            {/* Photo Section */}
-            {selectedReport.imageUrl ? (
-              <div className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-100 max-h-72">
-                <img
-                  src={selectedReport.imageUrl}
-                  alt={selectedReport.category}
-                  className="w-full h-full object-cover max-h-72"
-                />
-                <a
-                  href={selectedReport.imageUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-xl bg-slate-900/80 px-3 py-1.5 text-xs font-bold text-white hover:bg-slate-900 transition backdrop-blur-xs"
-                >
-                  <ExternalLink size={13} />
-                  <span>Open Full Photo</span>
-                </a>
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-xs text-slate-400">
-                No photo submitted for this hazard report.
+            {/* Photo preview */}
+            {selectedReport.imageUrl && (
+              <div className="rounded-2xl overflow-hidden border border-[#2E363D] max-h-72">
+                <img src={selectedReport.imageUrl} alt={selectedReport.category} className="w-full h-full object-cover max-h-72" />
               </div>
             )}
 
-            {/* Status & Department Update Controls */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-2xl bg-slate-50 p-4 border border-slate-200">
+            {/* Status & Department Selection */}
+            <div className="grid sm:grid-cols-2 gap-4 p-4 rounded-2xl bg-[#22272B] border border-[#2E363D]">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Update Report Status
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#F5F2ED] mb-1.5">
+                  Update Status
                 </label>
                 <select
                   value={modalStatus}
                   onChange={(e) => setModalStatus(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-800"
+                  className="input py-2 text-xs bg-[#101417] border-[#2E363D]"
                 >
-                  <option value="REPORTED">REPORTED (New / Unverified)</option>
-                  <option value="VERIFIED">VERIFIED (Confirmed by Admin)</option>
-                  <option value="IN_PROGRESS">IN_PROGRESS (Crew Dispatched)</option>
-                  <option value="RESOLVED">RESOLVED (Repaired & Closed)</option>
+                  <option value="REPORTED">REPORTED (New)</option>
+                  <option value="VERIFIED">VERIFIED (Confirmed)</option>
+                  <option value="IN_PROGRESS">IN PROGRESS (Dispatched)</option>
+                  <option value="RESOLVED">RESOLVED (Repaired)</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#F5F2ED] mb-1.5">
                   Assign Municipal Authority
                 </label>
                 <select
                   value={modalAssignment}
                   onChange={(e) => setModalAssignment(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800"
+                  className="input py-2 text-xs bg-[#101417] border-[#2E363D]"
                 >
                   <option value="">-- Unassigned --</option>
                   {AUTHORITY_DEPARTMENTS.map((dept) => (
@@ -1499,87 +1166,41 @@ WHERE id = (SELECT id FROM auth.users WHERE email = 'suhaspai13@gmail.com' LIMIT
               </div>
             </div>
 
-            {/* Report Details Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div className="p-3.5 rounded-xl border border-slate-100 bg-white">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Location</span>
-                <p className="mt-1 font-bold text-slate-800 flex items-start gap-1">
-                  <MapPin size={14} className="text-teal-600 shrink-0 mt-0.5" />
-                  <span>{selectedReport.address}</span>
-                </p>
-                {selectedReport.latitude && selectedReport.longitude && (
-                  <a
-                    href={`https://www.google.com/maps?q=${selectedReport.latitude},${selectedReport.longitude}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-teal-700 hover:underline"
-                  >
-                    <ExternalLink size={11} />
-                    <span>Open in Google Maps ({selectedReport.latitude.toFixed(4)}, {selectedReport.longitude.toFixed(4)})</span>
-                  </a>
-                )}
-              </div>
-
-              <div className="p-3.5 rounded-xl border border-slate-100 bg-white">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Reporter Identity</span>
-                <p className="mt-1 font-bold text-slate-900">{selectedReport.reporter?.name || 'Citizen'}</p>
-                <p className="font-mono text-slate-500 mt-0.5">{selectedReport.reporter?.email || 'Not provided'}</p>
-                <p className="text-[10px] text-slate-400 mt-2">
-                  Submitted: {selectedReport.reportedAt ? new Date(selectedReport.reportedAt).toLocaleString() : 'N/A'}
-                </p>
-              </div>
-            </div>
-
-            {/* Description */}
-            <div className="rounded-xl border border-slate-100 bg-white p-4 text-xs">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Citizen Description</span>
-              <p className="mt-1 text-slate-700 leading-relaxed italic">
-                {selectedReport.description ? `"${selectedReport.description}"` : 'No additional description provided.'}
-              </p>
-            </div>
-
-            {/* Administrative Notes & Action Log */}
-            <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 text-xs space-y-1.5">
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700">
-                Administrative Notes & Action Log
+            {/* Admin Notes */}
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-[#F5F2ED]">
+                Administrative Action Notes
               </label>
-              <p className="text-[11px] text-slate-500">
-                Internal authority notes regarding inspections, repair crew dispatches, or road status.
-              </p>
               <textarea
                 rows={3}
                 value={modalNotes}
                 onChange={(e) => setModalNotes(e.target.value)}
-                placeholder="Enter internal notes, work order number, or repair updates..."
-                className="w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs text-slate-800 placeholder-slate-400 focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+                placeholder="Log internal work order notes, inspection details..."
+                className="input text-xs resize-none"
               />
             </div>
 
-            {/* Modal Actions */}
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+            {/* Details */}
+            <div className="p-4 rounded-2xl bg-[#22272B] border border-[#2E363D] space-y-2">
+              <p><strong className="text-[#A8A8A3]">Location:</strong> {selectedReport.address}</p>
+              <p><strong className="text-[#A8A8A3]">Citizen Description:</strong> {selectedReport.description || 'No description entered.'}</p>
+              <p><strong className="text-[#A8A8A3]">Reporter:</strong> {selectedReport.reporter?.name} ({selectedReport.reporter?.email})</p>
+            </div>
+
+            {/* Actions */}
+            <div className="pt-4 border-t border-[#2E363D] flex justify-end gap-3">
               <button
                 onClick={handleCloseDetails}
-                className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition"
+                className="btn btn-secondary text-xs py-2 px-4"
               >
                 Cancel
               </button>
-
               <button
                 onClick={handleSaveModalChanges}
                 disabled={actionLoadingId === selectedReport.id}
-                className="flex items-center gap-1.5 rounded-xl bg-teal-600 px-5 py-2 text-xs font-bold text-white hover:bg-teal-700 transition shadow-sm disabled:opacity-50"
+                className="btn btn-accent text-xs font-bold py-2 px-5 shadow-amber-glow"
               >
-                {actionLoadingId === selectedReport.id ? (
-                  <>
-                    <RefreshCw size={13} className="animate-spin" />
-                    <span>Saving Changes...</span>
-                  </>
-                ) : (
-                  <>
-                    <Check size={14} />
-                    <span>Save Changes</span>
-                  </>
-                )}
+                {actionLoadingId === selectedReport.id ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </div>
