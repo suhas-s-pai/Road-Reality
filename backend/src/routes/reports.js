@@ -212,8 +212,22 @@ router.post("/", authenticateToken, async (req, res) => {
     const finalType = hazard_type || category;
     const finalSeverity = (severity || "medium").toLowerCase();
     const finalPhoto = photo_url || imageUrl || null;
+    const rawTraffic = String(req.body.traffic_impact || trafficImpact || "moderate").toLowerCase();
+    const trafficImpactMap = {
+      none: "low",
+      low: "low",
+      moderate: "moderate",
+      heavy: "blocked",
+      high: "high",
+      blocked: "blocked",
+      yes: "moderate",
+      no: "low"
+    };
+    const finalTrafficImpact = trafficImpactMap[rawTraffic] || "moderate";
     const finalTraffic =
-      traffic_affected !== undefined ? Boolean(traffic_affected) : trafficImpact === "yes";
+      traffic_affected !== undefined
+        ? Boolean(traffic_affected)
+        : rawTraffic !== "none" && rawTraffic !== "no" && rawTraffic !== "low";
 
     // ONLY Category / Hazard Type is strictly required
     if (!finalType || String(finalType).trim() === "") {
@@ -279,6 +293,7 @@ router.post("/", authenticateToken, async (req, res) => {
       longitude: numLng,
       address: finalAddress,
       severity: finalSeverity,
+      traffic_impact: finalTrafficImpact,
       traffic_affected: finalTraffic,
       photo_url: finalPhoto,
       status: "REPORTED",

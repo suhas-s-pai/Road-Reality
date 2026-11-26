@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { createHazard } from '../services/hazardService';
 import { uploadHazardPhoto } from '../services/storageService';
@@ -11,6 +11,7 @@ import {
   Search,
   Loader2,
   ArrowLeft,
+  ArrowRight,
   Camera,
   Upload,
   X,
@@ -28,8 +29,9 @@ import {
 const CATEGORIES_LIST = [
   { id: 'Pothole', name: 'Pothole', desc: 'Asphalt crater or crack', icon: '🕳️' },
   { id: 'Waterlogging', name: 'Waterlogging', desc: 'Flooded street or drain block', icon: '🌊' },
-  { id: 'Road Block', name: 'Road Block', desc: 'Barrier, closure or accident', icon: '⛔' },
-  { id: 'Road Damage', name: 'Road Damage', desc: 'Broken curb, gravel or debris', icon: '🚧' },
+  { id: 'Blocked Road', name: 'Blocked Road', desc: 'Barrier, closure or accident', icon: '⛔' },
+  { id: 'Road Debris', name: 'Road Debris', desc: 'Broken curb, gravel or debris', icon: '🚧' },
+  { id: 'Broken Streetlight', name: 'Broken Streetlight', desc: 'Dark stretch or faulty lamp', icon: '💡' },
   { id: 'Fallen Tree', name: 'Fallen Tree', desc: 'Branch or storm tree damage', icon: '🌳' },
   { id: 'Other', name: 'Other', desc: 'Any other safety obstruction', icon: '⚠️' }
 ];
@@ -71,6 +73,7 @@ export default function ReportHazard() {
   const [manualQuery, setManualQuery] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
   const [uploadStatus, setUploadStatus] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [submittedReport, setSubmittedReport] = useState(null);
@@ -152,6 +155,8 @@ export default function ReportHazard() {
 
   // Final Submit Report to Supabase & Backend
   const handleSubmitReport = async () => {
+    if (isSubmittingRef.current || submitting) return;
+    isSubmittingRef.current = true;
     setSubmitting(true);
     setFormError(null);
     setUploadStatus('Preparing hazard report...');
@@ -165,7 +170,8 @@ export default function ReportHazard() {
         try {
           finalPhotoUrl = await uploadHazardPhoto(selectedFile);
         } catch (uploadErr) {
-          console.warn('Storage upload error (proceeding with report):', uploadErr.message);
+          console.error('Storage upload error:', uploadErr.message);
+          throw new Error(`Photo upload failed: ${uploadErr.message}. You can remove the photo and submit without it, or try again.`);
         }
       }
 
@@ -200,6 +206,7 @@ export default function ReportHazard() {
       console.error('Report submission error:', err);
       setFormError(err.message || 'Unable to submit report. Please check your connection and try again.');
     } finally {
+      isSubmittingRef.current = false;
       setSubmitting(false);
       setUploadStatus('');
     }
@@ -464,6 +471,12 @@ export default function ReportHazard() {
                           type="text"
                           value={manualQuery}
                           onChange={(e) => setManualQuery(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleManualSearch(e);
+                            }
+                          }}
                           placeholder="City, road or area name..."
                           className="input py-2 text-xs"
                         />

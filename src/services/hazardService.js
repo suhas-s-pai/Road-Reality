@@ -48,6 +48,7 @@ export function normalizeReport(r) {
     verificationStatus: verificationText,
     reportedAt: r.created_at || r.reportedAt || new Date().toISOString(),
     updatedAt: r.updated_at || r.updatedAt || new Date().toISOString(),
+    admin_notes: r.admin_notes || r.notes || '',
     reporter: r.reporter || { name: 'Community Member' }
   };
 }
@@ -225,6 +226,23 @@ export async function createHazard(payload, token) {
     payload.longitude !== null &&
     !isNaN(Number(payload.longitude));
 
+  const rawTraffic = String(payload.trafficImpact || 'moderate').toLowerCase();
+  const trafficImpactMap = {
+    none: 'low',
+    low: 'low',
+    moderate: 'moderate',
+    heavy: 'blocked',
+    high: 'high',
+    blocked: 'blocked',
+    yes: 'moderate',
+    no: 'low'
+  };
+  const dbTrafficImpact = trafficImpactMap[rawTraffic] || 'moderate';
+  const isTrafficAffected =
+    payload.traffic_affected !== undefined
+      ? Boolean(payload.traffic_affected)
+      : rawTraffic !== 'none' && rawTraffic !== 'no' && rawTraffic !== 'low';
+
   const reportBody = {
     hazard_type: payload.category || payload.hazard_type,
     category: payload.category || payload.hazard_type,
@@ -232,7 +250,8 @@ export async function createHazard(payload, token) {
     latitude: hasCoordinates ? Number(payload.latitude) : null,
     longitude: hasCoordinates ? Number(payload.longitude) : null,
     severity: (payload.severity || 'medium').toLowerCase(),
-    traffic_affected: payload.trafficImpact === 'yes' || payload.traffic_affected === true,
+    traffic_impact: dbTrafficImpact,
+    traffic_affected: isTrafficAffected,
     photo_url: payload.imageUrl || payload.photo_url || null,
     address: payload.address || null,
     created_at: reportedAtTimestamp || new Date().toISOString()
@@ -345,7 +364,7 @@ export async function updateHazardStatus(id, status, token) {
 /**
  * Update report status and/or authority assignment (Admin only)
  */
-export async function updateAdminReport(id, { status, assigned_to }, token) {
+export async function updateAdminReport(id, { status, assigned_to, admin_notes }, token) {
   if (!token) {
     throw new Error('Authentication required for updating report');
   }
@@ -353,6 +372,7 @@ export async function updateAdminReport(id, { status, assigned_to }, token) {
   const payload = {};
   if (status) payload.status = status;
   if (assigned_to !== undefined) payload.assigned_to = assigned_to;
+  if (admin_notes !== undefined) payload.admin_notes = admin_notes;
 
   const res = await fetch(`${base}/admin/reports/${id}`, {
     method: 'PUT',

@@ -2,6 +2,8 @@ const fs = require("fs");
 const path = require("path");
 const supabase = require("./supabase");
 
+const isDbEnabled = () => Boolean(supabase && process.env.OFFLINE_MODE !== "true");
+
 const DATA_DIR = path.join(__dirname, "..", "data");
 const STORE_FILE = path.join(DATA_DIR, "admin_store.json");
 
@@ -64,7 +66,7 @@ async function recordAuditLog({ actorId, actorEmail, action, targetEmail, detail
     created_at: timestamp
   };
 
-  if (supabase) {
+  if (isDbEnabled()) {
     try {
       const { error } = await supabase.from("admin_audit_logs").insert([entry]);
       if (!error) return entry;
@@ -87,7 +89,7 @@ async function recordAuditLog({ actorId, actorEmail, action, targetEmail, detail
 async function listAdmins() {
   let dbAdmins = [];
 
-  if (supabase) {
+  if (isDbEnabled()) {
     try {
       const { data, error } = await supabase
         .from("profiles")
@@ -137,7 +139,7 @@ async function listAdmins() {
  * Get all invitations (Pending, Accepted, Expired, Cancelled)
  */
 async function getAllInvitations() {
-  if (supabase) {
+  if (isDbEnabled()) {
     try {
       const { data, error } = await supabase
         .from("admin_invitations")
@@ -168,7 +170,7 @@ async function getInvitations() {
  * Get recent audit logs
  */
 async function getAuditLogs(limit = 50) {
-  if (supabase) {
+  if (isDbEnabled()) {
     try {
       const { data, error } = await supabase
         .from("admin_audit_logs")
@@ -238,7 +240,7 @@ async function addOrInviteAdmin({ email, fullName, actorUser }) {
   };
 
   // Try saving to Supabase
-  if (supabase) {
+  if (isDbEnabled()) {
     try {
       await supabase.from("admin_invitations").insert([newInvitation]);
     } catch (err) {
@@ -277,7 +279,7 @@ async function cancelInvitation({ invitationId, actorUser }) {
     return { success: false, message: "Invitation ID is required." };
   }
 
-  if (supabase) {
+  if (isDbEnabled()) {
     try {
       await supabase
         .from("admin_invitations")
@@ -324,7 +326,7 @@ async function claimPendingInvitation(userEmail, userId) {
   let claimed = false;
   let designatedName = "Administrator";
 
-  if (supabase) {
+  if (isDbEnabled()) {
     try {
       const { data: inv, error } = await supabase
         .from("admin_invitations")
@@ -396,7 +398,7 @@ async function claimPendingInvitation(userEmail, userId) {
  * List all removal requests
  */
 async function listRemovalRequests() {
-  if (supabase) {
+  if (isDbEnabled()) {
     try {
       const { data, error } = await supabase
         .from("admin_removal_requests")
@@ -489,7 +491,7 @@ async function createRemovalRequest({ targetId, targetEmail, reason, actorUser }
   };
 
   // Try saving to Supabase
-  if (supabase) {
+  if (isDbEnabled()) {
     try {
       await supabase.from("admin_removal_requests").insert([newRemovalReq]);
     } catch (err) {
@@ -514,6 +516,7 @@ async function createRemovalRequest({ targetId, targetEmail, reason, actorUser }
 
   return {
     success: true,
+    requestId: newRemovalReq.id,
     message: `Removal request created for ${target.email}. An in-app notification has been sent awaiting their approval.`,
     request: newRemovalReq
   };
@@ -569,7 +572,7 @@ async function respondToRemoveRequest({ requestId, action, decisionNote, actorUs
     }
 
     // Demote target in Supabase profiles (and clear public display name per privacy rule)
-    if (supabase && removalReq.target_id && !removalReq.target_id.startsWith("bootstrap-")) {
+    if (isDbEnabled() && removalReq.target_id && !removalReq.target_id.startsWith("bootstrap-")) {
       try {
         await supabase
           .from("profiles")
@@ -587,7 +590,7 @@ async function respondToRemoveRequest({ requestId, action, decisionNote, actorUs
     }
 
     // Update removal request record in Supabase
-    if (supabase) {
+    if (isDbEnabled()) {
       try {
         await supabase
           .from("admin_removal_requests")
@@ -644,7 +647,7 @@ async function respondToRemoveRequest({ requestId, action, decisionNote, actorUs
 
   // CASE 2: TARGET DECLINES REMOVAL
   // Keep admin role, mark request as declined
-  if (supabase) {
+  if (isDbEnabled()) {
     try {
       await supabase
         .from("admin_removal_requests")
@@ -687,6 +690,7 @@ async function respondToRemoveRequest({ requestId, action, decisionNote, actorUs
 
   return {
     success: true,
+    declined: true,
     approved: false,
     selfDemoted: false,
     message: "You have declined the removal request. You remain an active administrator."
@@ -710,7 +714,7 @@ async function cancelRemovalRequest({ requestId, actorUser }) {
 
   const timestamp = new Date().toISOString();
 
-  if (supabase) {
+  if (isDbEnabled()) {
     try {
       await supabase
         .from("admin_removal_requests")
@@ -766,7 +770,7 @@ async function removeAdmin({ targetId, targetEmail, actorUser }) {
     (target.email && actorEmail && target.email.toLowerCase() === actorEmail.toLowerCase())
   );
 
-  if (supabase && target.id && !target.id.startsWith("bootstrap-")) {
+  if (isDbEnabled() && target.id && !target.id.startsWith("bootstrap-")) {
     try {
       await supabase
         .from("profiles")
@@ -811,5 +815,7 @@ module.exports = {
   createRemovalRequest,
   respondToRemoveRequest,
   cancelRemovalRequest,
-  recordAuditLog
+  recordAuditLog,
+  readLocalStore,
+  writeLocalStore
 };

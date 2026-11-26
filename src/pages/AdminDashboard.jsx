@@ -900,7 +900,7 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
                   </div>
                 </div>
 
-                {/* Reports by Category (SVG Donut Chart) */}
+                {/* Reports by Category (Dynamic SVG Donut Chart) */}
                 <div className="card p-5 bg-[#191D20] border-[#2E363D] rounded-2xl space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
@@ -909,51 +909,65 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-around pt-2">
-                    {/* SVG Donut */}
-                    <div className="relative h-32 w-32 shrink-0">
-                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                        {/* Background Ring */}
-                        <circle cx="18" cy="18" r="15.9" fill="none" stroke="#22272B" strokeWidth="3.8" />
-                        {/* Pothole (42%) */}
-                        <circle cx="18" cy="18" r="15.9" fill="none" stroke="#F5A623" strokeWidth="3.8" strokeDasharray="42 58" strokeDashoffset="0" />
-                        {/* Waterlogging (25%) */}
-                        <circle cx="18" cy="18" r="15.9" fill="none" stroke="#06B6D4" strokeWidth="3.8" strokeDasharray="25 75" strokeDashoffset="-42" />
-                        {/* Road Block (18%) */}
-                        <circle cx="18" cy="18" r="15.9" fill="none" stroke="#EF4444" strokeWidth="3.8" strokeDasharray="18 82" strokeDashoffset="-67" />
-                        {/* Other (15%) */}
-                        <circle cx="18" cy="18" r="15.9" fill="none" stroke="#C87942" strokeWidth="3.8" strokeDasharray="15 85" strokeDashoffset="-85" />
-                      </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                        <span className="text-base font-black text-[#F5F2ED] font-display">{stats.totalReports}</span>
-                        <span className="text-[9px] uppercase tracking-wider text-[#A8A8A3]">Reports</span>
-                      </div>
-                    </div>
+                  {(() => {
+                    const palette = ['#F5A623', '#06B6D4', '#EF4444', '#C87942', '#10B981', '#A855F7'];
+                    const total = reportsList.length || 0;
+                    const entries = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1]);
+                    const topEntries = entries.slice(0, 4);
+                    let cumulative = 0;
 
-                    {/* Legend */}
-                    <div className="space-y-1.5 text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-[#F5A623]" />
-                        <span className="text-[#F5F2ED]">Pothole</span>
-                        <span className="text-[#A8A8A3] text-[11px]">42%</span>
+                    return (
+                      <div className="flex items-center justify-around pt-2 gap-4">
+                        <div className="relative h-32 w-32 shrink-0">
+                          <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#22272B" strokeWidth="3.8" />
+                            {total > 0 && topEntries.map(([cat, count], idx) => {
+                              const pct = Math.round((count / total) * 100);
+                              const dash = `${pct} ${100 - pct}`;
+                              const offset = -cumulative;
+                              cumulative += pct;
+                              return (
+                                <circle
+                                  key={cat}
+                                  cx="18"
+                                  cy="18"
+                                  r="15.9"
+                                  fill="none"
+                                  stroke={palette[idx % palette.length]}
+                                  strokeWidth="3.8"
+                                  strokeDasharray={dash}
+                                  strokeDashoffset={offset}
+                                />
+                              );
+                            })}
+                          </svg>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                            <span className="text-base font-black text-[#F5F2ED] font-display">{stats.totalReports}</span>
+                            <span className="text-[9px] uppercase tracking-wider text-[#A8A8A3]">Reports</span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5 text-xs min-w-[130px]">
+                          {topEntries.length === 0 ? (
+                            <p className="text-[11px] text-[#A8A8A3] italic">No reports yet</p>
+                          ) : (
+                            topEntries.map(([cat, count], idx) => {
+                              const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                              return (
+                                <div key={cat} className="flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-2 truncate">
+                                    <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: palette[idx % palette.length] }} />
+                                    <span className="text-[#F5F2ED] truncate max-w-[100px]">{cat}</span>
+                                  </div>
+                                  <span className="text-[#A8A8A3] text-[11px] font-mono">{pct}%</span>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-[#06B6D4]" />
-                        <span className="text-[#F5F2ED]">Waterlogging</span>
-                        <span className="text-[#A8A8A3] text-[11px]">25%</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-[#EF4444]" />
-                        <span className="text-[#F5F2ED]">Road Block</span>
-                        <span className="text-[#A8A8A3] text-[11px]">18%</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-[#C87942]" />
-                        <span className="text-[#F5F2ED]">Other Damage</span>
-                        <span className="text-[#A8A8A3] text-[11px]">15%</span>
-                      </div>
-                    </div>
-                  </div>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -1808,6 +1822,55 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
                   <span className="text-xs text-[#A8A8A3] uppercase tracking-wider block">Citizen Engagement</span>
                   <p className="text-4xl font-black text-[#06B6D4] font-display mt-2">{stats.totalUsers}</p>
                   <span className="text-[11px] text-[#A8A8A3] mt-1 block">Registered reporters</span>
+                </div>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="card p-5 bg-[#191D20] border-[#2E363D] rounded-2xl space-y-3">
+                  <h3 className="text-sm font-bold text-[#F5F2ED]">Breakdown by Category</h3>
+                  {Object.keys(categoryCounts).length === 0 ? (
+                    <p className="text-xs text-[#A8A8A3] italic">No hazard reports recorded yet.</p>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {Object.entries(categoryCounts).sort((a, b) => b[1] - a[1]).map(([cat, count]) => {
+                        const pct = reportsList.length > 0 ? Math.round((count / reportsList.length) * 100) : 0;
+                        return (
+                          <div key={cat} className="space-y-1 text-xs">
+                            <div className="flex justify-between">
+                              <span className="font-semibold text-[#F5F2ED]">{cat}</span>
+                              <span className="font-mono text-[#A8A8A3]">{count} ({pct}%)</span>
+                            </div>
+                            <div className="h-1.5 w-full rounded-full bg-[#22272B] overflow-hidden">
+                              <div className="h-full rounded-full bg-[#F5A623]" style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="card p-5 bg-[#191D20] border-[#2E363D] rounded-2xl space-y-3">
+                  <h3 className="text-sm font-bold text-[#F5F2ED]">Breakdown by Severity</h3>
+                  <div className="space-y-2.5">
+                    {['critical', 'high', 'medium', 'low'].map((sev) => {
+                      const count = severityCounts[sev] || 0;
+                      const pct = reportsList.length > 0 ? Math.round((count / reportsList.length) * 100) : 0;
+                      const barColor =
+                        sev === 'critical' ? '#EF4444' : sev === 'high' ? '#F5A623' : sev === 'medium' ? '#06B6D4' : '#10B981';
+                      return (
+                        <div key={sev} className="space-y-1 text-xs">
+                          <div className="flex justify-between">
+                            <span className="font-semibold capitalize text-[#F5F2ED]">{sev}</span>
+                            <span className="font-mono text-[#A8A8A3]">{count} ({pct}%)</span>
+                          </div>
+                          <div className="h-1.5 w-full rounded-full bg-[#22272B] overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: barColor }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>

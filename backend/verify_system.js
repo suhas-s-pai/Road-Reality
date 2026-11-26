@@ -38,6 +38,7 @@ async function runTests() {
 
     if (error && (error.message?.includes("fetch failed") || error.details?.includes("ENOTFOUND"))) {
       console.log("  [NOTE] Supabase external network unreachable in sandbox test environment (ENOTFOUND). Fallback local store verified.");
+      process.env.OFFLINE_MODE = "true";
       passed += 2;
     } else {
       assert(!error && profile, "Admin profile query for suhaspai13@gmail.com", profile?.role);
@@ -46,6 +47,7 @@ async function runTests() {
   } catch (err) {
     if (err.message?.includes("fetch failed") || err.message?.includes("ENOTFOUND")) {
       console.log("  [NOTE] Supabase external network unreachable in sandbox test environment. Fallback store verified.");
+      process.env.OFFLINE_MODE = "true";
       passed += 2;
     } else {
       assert(false, "Supabase connection test", err.message);
@@ -178,12 +180,18 @@ async function runTests() {
     // 6. Two-Person Removal Approval Workflow Verification
     console.log("\n6. Two-Person Administrator Removal Approval Workflow:");
     // Setup two test administrators in local store for isolated workflow testing
-    const adminA = { id: "admin-a-test", email: "admin.alpha@gmail.com", full_name: "Admin Alpha", role: "admin" };
-    const adminB = { id: "admin-b-test", email: "admin.bravo@gmail.com", full_name: "Admin Bravo", role: "admin" };
+    const adminA = { id: "admin-a-test", email: "admin.alpha@gmail.com", full_name: "Admin Alpha", role: "admin", created_at: new Date().toISOString() };
+    const adminB = { id: "admin-b-test", email: "admin.bravo@gmail.com", full_name: "Admin Bravo", role: "admin", created_at: new Date().toISOString() };
 
-    // Register test admins
-    await adminMgmt.addOrInviteAdmin({ email: adminA.email, fullName: adminA.full_name, actorUser: admins[0] });
-    await adminMgmt.addOrInviteAdmin({ email: adminB.email, fullName: adminB.full_name, actorUser: admins[0] });
+    // Register test admins in active administrators roster
+    const store = adminMgmt.readLocalStore();
+    store.localAdmins = [
+      admins[0],
+      adminA,
+      adminB
+    ];
+    store.removalRequests = [];
+    adminMgmt.writeLocalStore(store);
 
     // Test A: Admin A cannot request removal of himself
     const selfReq = await adminMgmt.createRemovalRequest({
@@ -201,7 +209,8 @@ async function runTests() {
       reason: "Routine civic transfer",
       actorUser: adminA
     });
-    assert(removalReq.success && removalReq.requestId, "Admin A successfully creates removal request targeting Admin B");
+    const reqId1 = removalReq.requestId || removalReq.request?.id;
+    assert(removalReq.success && reqId1, "Admin A successfully creates removal request targeting Admin B");
 
     // Test C: Duplicate pending request for Admin B is blocked
     const dupReq = await adminMgmt.createRemovalRequest({
@@ -214,7 +223,7 @@ async function runTests() {
 
     // Test D: Admin A (requester) cannot approve the removal request
     const requesterApprove = await adminMgmt.respondToRemoveRequest({
-      requestId: removalReq.requestId,
+      requestId: reqId1,
       action: "approve",
       actorUser: adminA
     });
@@ -222,7 +231,7 @@ async function runTests() {
 
     // Test E: Target Admin B declining the request
     const declineRes = await adminMgmt.respondToRemoveRequest({
-      requestId: removalReq.requestId,
+      requestId: reqId1,
       action: "decline",
       decisionNote: "Still actively serving district",
       actorUser: adminB
@@ -236,10 +245,11 @@ async function runTests() {
       reason: "Approved transfer",
       actorUser: adminA
     });
-    assert(removalReq2.success, "Admin A creates second removal request after previous decline");
+    const reqId2 = removalReq2.requestId || removalReq2.request?.id;
+    assert(removalReq2.success && reqId2, "Admin A creates second removal request after previous decline");
 
     const approveRes = await adminMgmt.respondToRemoveRequest({
-      requestId: removalReq2.requestId,
+      requestId: reqId2,
       action: "approve",
       decisionNote: "Transfer acknowledged",
       actorUser: adminB
@@ -253,11 +263,18 @@ async function runTests() {
       email: "citizen.visitor@gmail.com",
       user_metadata: { full_name: "PublicGoogleName", name: "PublicGoogleName", avatar_url: "https://avatar.png" }
     };
-    // Sync ordinary user profile via auth logic
-    const { syncUserProfileDirect } = require("./src/routes/auth");
-    if (typeof syncUserProfileDirect === "function") {
-      const synced = await syncUserProfileDirect(testOrdinaryUser);
-      assert(synced && synced.name === null, "Ordinary user profile sync enforces name = null (privacy)");
+    const authRouter = require("./src/routes/auth");
+    if (typeof authRouter.buildSanitizedProfileData === "function") {
+      const sanitizedCitizen = authRouter.buildSanitizedProfileData(testOrdinaryUser, "user");
+      assert(
+        sanitizedCitizen.name === null && sanitizedCitizen.full_name === null && sanitizedCitizen.avatar_url === null,
+        "Ordinary user data collection enforces name = null and avatar_url = null (Citizen Privacy Preserved)"
+      );
+      const sanitizedAdmin = authRouter.buildSanitizedProfileData(testOrdinaryUser, "admin", "Civic Administrator");
+      assert(
+        sanitizedAdmin.name === "Civic Administrator" && sanitizedAdmin.role === "admin",
+        "Designated admin name is preserved for administrator accounts"
+      );
     } else {
       assert(true, "AuthContext & API enforce minimal user profile data collection");
     }

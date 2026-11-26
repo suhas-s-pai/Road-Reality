@@ -1,6 +1,86 @@
 {
   "invitations": [
     {
+      "id": "inv_1795714500283_7al5e",
+      "email": "test.staff.1795714500268@gmail.com",
+      "full_name": "Test Civic Staff",
+      "invited_by": "bootstrap-admin-01",
+      "invited_by_email": "suhaspai13@gmail.com",
+      "status": "pending",
+      "created_at": "2026-11-26T17:35:00.283Z",
+      "updated_at": "2026-11-26T17:35:00.283Z"
+    },
+    {
+      "id": "inv_1795632572192_1i2nw",
+      "email": "test.staff.1795632572187@gmail.com",
+      "full_name": "Test Civic Staff",
+      "invited_by": "bootstrap-admin-01",
+      "invited_by_email": "suhaspai13@gmail.com",
+      "status": "pending",
+      "created_at": "2026-11-25T18:49:32.192Z",
+      "updated_at": "2026-11-25T18:49:32.192Z"
+    },
+    {
+      "id": "inv_1795632512007_g9m4m",
+      "email": "test.staff.1795632511998@gmail.com",
+      "full_name": "Test Civic Staff",
+      "invited_by": "bootstrap-admin-01",
+      "invited_by_email": "suhaspai13@gmail.com",
+      "status": "pending",
+      "created_at": "2026-11-25T18:48:32.007Z",
+      "updated_at": "2026-11-25T18:48:32.007Z"
+    },
+    {
+      "id": "inv_1795632408154_2x2nu",
+      "email": "test.staff.1795632408150@gmail.com",
+      "full_name": "Test Civic Staff",
+      "invited_by": "bootstrap-admin-01",
+      "invited_by_email": "suhaspai13@gmail.com",
+      "status": "pending",
+      "created_at": "2026-11-25T18:46:48.154Z",
+      "updated_at": "2026-11-25T18:46:48.154Z"
+    },
+    {
+      "id": "inv_1795632251158_laljt",
+      "email": "test.staff.1795632237012@gmail.com",
+      "full_name": "Test Civic Staff",
+      "invited_by": "bootstrap-admin-01",
+      "invited_by_email": "suhaspai13@gmail.com",
+      "status": "pending",
+      "created_at": "2026-11-25T18:44:11.158Z",
+      "updated_at": "2026-11-25T18:44:11.158Z"
+    },
+    {
+      "id": "inv_1795632100599_aext7",
+      "email": "admin.bravo@gmail.com",
+      "full_name": "Admin Bravo",
+      "invited_by": "bootstrap-admin-01",
+      "invited_by_email": "suhaspai13@gmail.com",
+      "status": "pending",
+      "created_at": "2026-11-25T18:41:40.599Z",
+      "updated_at": "2026-11-25T18:41:40.599Z"
+    },
+    {
+      "id": "inv_1795632086494_0zfpa",
+      "email": "admin.alpha@gmail.com",
+      "full_name": "Admin Alpha",
+      "invited_by": "bootstrap-admin-01",
+      "invited_by_email": "suhaspai13@gmail.com",
+      "status": "pending",
+      "created_at": "2026-11-25T18:41:26.494Z",
+      "updated_at": "2026-11-25T18:41:26.494Z"
+    },
+    {
+      "id": "inv_1795632065362_ikpt6",
+      "email": "test.staff.1795632051278@gmail.com",
+      "full_name": "Test Civic Staff",
+      "invited_by": "bootstrap-admin-01",
+      "invited_by_email": "suhaspai13@gmail.com",
+      "status": "pending",
+      "created_at": "2026-11-25T18:41:05.362Z",
+      "updated_at": "2026-11-25T18:41:05.362Z"
+    },
+    {
       "id": "inv_1795629894738_n4un8",
       "email": "test.staff.1795629873507@gmail.com",
       "full_name": "Test Civic Staff",
@@ -42,6 +122,312 @@
     }
   ],
   "auditLogs": [
+    {
+      "id": "log_1795714500476_r45k2",
+      "actor_id": "admin-b-test",
+      "actor_email": "admin.bravo@gmail.com",
+      "action": "APPROVE_ADMIN_REMOVAL",
+      "target_email": "admin.bravo@gmail.com",
+      "details": {
+        "requestId": "rmv_1795714500427_ijnvf",
+        "requesterEmail": "admin.alpha@gmail.com",
+        "decisionNote": "Transfer acknowledged"
+      },
+      "created_at": "2026-11-26T17:35:00.475Z"
+    },
+    {
+      "id": "log_1795714500438_qrw1x",
+      "actor_id": "admin-a-test",
+      "actor_email": "admin.alpha@gmail.com",
+      "action": "REQUEST_ADMIN_REMOVAL",
+      "target_email": "admin.bravo@gmail.com",
+      "details": {
+        "reason": "Approved transfer",
+        "requestId": "rmv_1795714500427_ijnvf"
+      },
+      "created_at": "2026-11-26T17:35:00.438Z"
+    },
+    {
+      "id": "log_1795714500405_tp23e",
+      "actor_id": "admin-b-test",
+      "actor_email": "admin.bravo@gmail.com",
+      "action": "DECLINE_ADMIN_REMOVAL",
+      "target_email": "admin.bravo@gmail.com",
+      "details": {
+        "requestId": "rmv_1795714500342_91lzo",
+        "requesterEmail": "admin.alpha@gmail.com",
+        "decisionNote": "Still actively serving district"
+      },
+      "created_at": "2026-11-26T17:35:00.405Z"
+    },
+    {
+      "id": "log_1795714500354_71rau",
+      "actor_id": "admin-a-test",
+      "actor_email": "admin.alpha@gmail.com",
+      "action": "REQUEST_ADMIN_REMOVAL",
+      "target_email": "admin.bravo@gmail.com",
+      "details": {
+        "reason": "Routine civic transfer",
+        "requestId": "rmv_1795714500342_91lzo"
+      },
+      "created_at": "2026-11-26T17:35:00.354Z"
+    },
+    {
+      "id": "log_1795714500293_w5zpm",
+      "actor_id": "bootstrap-admin-01",
+      "actor_email": "suhaspai13@gmail.com",
+      "action": "INVITE_ADMIN",
+      "target_email": "test.staff.1795714500268@gmail.com",
+      "details": {
+        "fullName": "Test Civic Staff",
+        "status": "pending"
+      },
+      "created_at": "2026-11-26T17:35:00.293Z"
+    },
+    {
+      "id": "log_1795714500257_43rsz",
+      "actor_id": "bootstrap-admin-01",
+      "actor_email": "suhaspai13@gmail.com",
+      "action": "SELF_DEMOTION",
+      "target_email": "suhaspai13@gmail.com",
+      "details": {
+        "targetId": "bootstrap-admin-01",
+        "isSelfDemotion": true
+      },
+      "created_at": "2026-11-26T17:35:00.257Z"
+    },
+    {
+      "id": "log_1795632572271_iowva",
+      "actor_id": "admin-b-test",
+      "actor_email": "admin.bravo@gmail.com",
+      "action": "APPROVE_ADMIN_REMOVAL",
+      "target_email": "admin.bravo@gmail.com",
+      "details": {
+        "requestId": "rmv_1795632572255_bb346",
+        "requesterEmail": "admin.alpha@gmail.com",
+        "decisionNote": "Transfer acknowledged"
+      },
+      "created_at": "2026-11-25T18:49:32.271Z"
+    },
+    {
+      "id": "log_1795632572259_pp1n2",
+      "actor_id": "admin-a-test",
+      "actor_email": "admin.alpha@gmail.com",
+      "action": "REQUEST_ADMIN_REMOVAL",
+      "target_email": "admin.bravo@gmail.com",
+      "details": {
+        "reason": "Approved transfer",
+        "requestId": "rmv_1795632572255_bb346"
+      },
+      "created_at": "2026-11-25T18:49:32.259Z"
+    },
+    {
+      "id": "log_1795632572247_gfs0l",
+      "actor_id": "admin-b-test",
+      "actor_email": "admin.bravo@gmail.com",
+      "action": "DECLINE_ADMIN_REMOVAL",
+      "target_email": "admin.bravo@gmail.com",
+      "details": {
+        "requestId": "rmv_1795632572220_6rufv",
+        "requesterEmail": "admin.alpha@gmail.com",
+        "decisionNote": "Still actively serving district"
+      },
+      "created_at": "2026-11-25T18:49:32.247Z"
+    },
+    {
+      "id": "log_1795632572224_lxt30",
+      "actor_id": "admin-a-test",
+      "actor_email": "admin.alpha@gmail.com",
+      "action": "REQUEST_ADMIN_REMOVAL",
+      "target_email": "admin.bravo@gmail.com",
+      "details": {
+        "reason": "Routine civic transfer",
+        "requestId": "rmv_1795632572220_6rufv"
+      },
+      "created_at": "2026-11-25T18:49:32.224Z"
+    },
+    {
+      "id": "log_1795632572198_0sfbf",
+      "actor_id": "bootstrap-admin-01",
+      "actor_email": "suhaspai13@gmail.com",
+      "action": "INVITE_ADMIN",
+      "target_email": "test.staff.1795632572187@gmail.com",
+      "details": {
+        "fullName": "Test Civic Staff",
+        "status": "pending"
+      },
+      "created_at": "2026-11-25T18:49:32.198Z"
+    },
+    {
+      "id": "log_1795632572182_hvhg0",
+      "actor_id": "bootstrap-admin-01",
+      "actor_email": "suhaspai13@gmail.com",
+      "action": "SELF_DEMOTION",
+      "target_email": "suhaspai13@gmail.com",
+      "details": {
+        "targetId": "bootstrap-admin-01",
+        "isSelfDemotion": true
+      },
+      "created_at": "2026-11-25T18:49:32.181Z"
+    },
+    {
+      "id": "log_1795632512104_4i2b7",
+      "actor_id": "admin-b-test",
+      "actor_email": "admin.bravo@gmail.com",
+      "action": "APPROVE_ADMIN_REMOVAL",
+      "target_email": "admin.bravo@gmail.com",
+      "details": {
+        "requestId": "rmv_1795632512085_o678d",
+        "requesterEmail": "admin.alpha@gmail.com",
+        "decisionNote": "Transfer acknowledged"
+      },
+      "created_at": "2026-11-25T18:48:32.104Z"
+    },
+    {
+      "id": "log_1795632512090_5v89o",
+      "actor_id": "admin-a-test",
+      "actor_email": "admin.alpha@gmail.com",
+      "action": "REQUEST_ADMIN_REMOVAL",
+      "target_email": "admin.bravo@gmail.com",
+      "details": {
+        "reason": "Approved transfer",
+        "requestId": "rmv_1795632512085_o678d"
+      },
+      "created_at": "2026-11-25T18:48:32.090Z"
+    },
+    {
+      "id": "log_1795632512075_1f6m1",
+      "actor_id": "admin-b-test",
+      "actor_email": "admin.bravo@gmail.com",
+      "action": "DECLINE_ADMIN_REMOVAL",
+      "target_email": "admin.bravo@gmail.com",
+      "details": {
+        "requestId": "rmv_1795632512044_dr4qj",
+        "requesterEmail": "admin.alpha@gmail.com",
+        "decisionNote": "Still actively serving district"
+      },
+      "created_at": "2026-11-25T18:48:32.075Z"
+    },
+    {
+      "id": "log_1795632512051_g8kta",
+      "actor_id": "admin-a-test",
+      "actor_email": "admin.alpha@gmail.com",
+      "action": "REQUEST_ADMIN_REMOVAL",
+      "target_email": "admin.bravo@gmail.com",
+      "details": {
+        "reason": "Routine civic transfer",
+        "requestId": "rmv_1795632512044_dr4qj"
+      },
+      "created_at": "2026-11-25T18:48:32.051Z"
+    },
+    {
+      "id": "log_1795632512014_zv4bp",
+      "actor_id": "bootstrap-admin-01",
+      "actor_email": "suhaspai13@gmail.com",
+      "action": "INVITE_ADMIN",
+      "target_email": "test.staff.1795632511998@gmail.com",
+      "details": {
+        "fullName": "Test Civic Staff",
+        "status": "pending"
+      },
+      "created_at": "2026-11-25T18:48:32.014Z"
+    },
+    {
+      "id": "log_1795632511991_nz5yn",
+      "actor_id": "bootstrap-admin-01",
+      "actor_email": "suhaspai13@gmail.com",
+      "action": "SELF_DEMOTION",
+      "target_email": "suhaspai13@gmail.com",
+      "details": {
+        "targetId": "bootstrap-admin-01",
+        "isSelfDemotion": true
+      },
+      "created_at": "2026-11-25T18:48:31.991Z"
+    },
+    {
+      "id": "log_1795632408164_paoph",
+      "actor_id": "admin-a-test",
+      "actor_email": "admin.alpha@gmail.com",
+      "action": "REQUEST_ADMIN_REMOVAL",
+      "target_email": "admin.bravo@gmail.com",
+      "details": {
+        "reason": "Routine civic transfer",
+        "requestId": "rmv_1795632408163_pe7u3"
+      },
+      "created_at": "2026-11-25T18:46:48.164Z"
+    },
+    {
+      "id": "log_1795632408156_h7f3b",
+      "actor_id": "bootstrap-admin-01",
+      "actor_email": "suhaspai13@gmail.com",
+      "action": "INVITE_ADMIN",
+      "target_email": "test.staff.1795632408150@gmail.com",
+      "details": {
+        "fullName": "Test Civic Staff",
+        "status": "pending"
+      },
+      "created_at": "2026-11-25T18:46:48.156Z"
+    },
+    {
+      "id": "log_1795632408148_xqpqh",
+      "actor_id": "bootstrap-admin-01",
+      "actor_email": "suhaspai13@gmail.com",
+      "action": "SELF_DEMOTION",
+      "target_email": "suhaspai13@gmail.com",
+      "details": {
+        "targetId": "bootstrap-admin-01",
+        "isSelfDemotion": true
+      },
+      "created_at": "2026-11-25T18:46:48.148Z"
+    },
+    {
+      "id": "log_1795632251180_3xlcp",
+      "actor_id": "bootstrap-admin-01",
+      "actor_email": "suhaspai13@gmail.com",
+      "action": "INVITE_ADMIN",
+      "target_email": "test.staff.1795632237012@gmail.com",
+      "details": {
+        "fullName": "Test Civic Staff",
+        "status": "pending"
+      },
+      "created_at": "2026-11-25T18:44:11.180Z"
+    },
+    {
+      "id": "log_1795632100607_rqtn3",
+      "actor_id": "bootstrap-admin-01",
+      "actor_email": "suhaspai13@gmail.com",
+      "action": "INVITE_ADMIN",
+      "target_email": "admin.bravo@gmail.com",
+      "details": {
+        "fullName": "Admin Bravo",
+        "status": "pending"
+      },
+      "created_at": "2026-11-25T18:41:40.607Z"
+    },
+    {
+      "id": "log_1795632086505_w0z8r",
+      "actor_id": "bootstrap-admin-01",
+      "actor_email": "suhaspai13@gmail.com",
+      "action": "INVITE_ADMIN",
+      "target_email": "admin.alpha@gmail.com",
+      "details": {
+        "fullName": "Admin Alpha",
+        "status": "pending"
+      },
+      "created_at": "2026-11-25T18:41:26.505Z"
+    },
+    {
+      "id": "log_1795632065374_wogvw",
+      "actor_id": "bootstrap-admin-01",
+      "actor_email": "suhaspai13@gmail.com",
+      "action": "INVITE_ADMIN",
+      "target_email": "test.staff.1795632051278@gmail.com",
+      "details": {
+        "fullName": "Test Civic Staff",
+        "status": "pending"
+      },
+      "created_at": "2026-11-25T18:41:05.374Z"
+    },
     {
       "id": "log_1795630271244_a2wkt",
       "actor_id": "bootstrap-admin-01",
@@ -91,5 +477,56 @@
       "created_at": "2026-11-25T18:04:54.761Z"
     }
   ],
-  "localAdmins": []
+  "localAdmins": [
+    {
+      "id": "bootstrap-admin-01",
+      "email": "suhaspai13@gmail.com",
+      "full_name": "Suhas S Pai",
+      "name": "Suhas S Pai",
+      "avatar_url": "",
+      "role": "admin",
+      "created_at": "2026-11-25T18:43:49.939Z"
+    },
+    {
+      "id": "admin-a-test",
+      "email": "admin.alpha@gmail.com",
+      "full_name": "Admin Alpha",
+      "role": "admin",
+      "created_at": "2026-11-26T17:35:00.310Z"
+    }
+  ],
+  "removalRequests": [
+    {
+      "id": "rmv_1795714500427_ijnvf",
+      "requester_id": "admin-a-test",
+      "requester_email": "admin.alpha@gmail.com",
+      "requester_name": "admin.alpha",
+      "target_id": "admin-b-test",
+      "target_email": "admin.bravo@gmail.com",
+      "target_name": "Admin Bravo",
+      "reason": "Approved transfer",
+      "status": "approved",
+      "created_at": "2026-11-26T17:35:00.427Z",
+      "updated_at": "2026-11-26T17:35:00.457Z",
+      "decision_by": "admin-b-test",
+      "decision_at": "2026-11-26T17:35:00.457Z",
+      "decision_note": "Transfer acknowledged"
+    },
+    {
+      "id": "rmv_1795714500342_91lzo",
+      "requester_id": "admin-a-test",
+      "requester_email": "admin.alpha@gmail.com",
+      "requester_name": "admin.alpha",
+      "target_id": "admin-b-test",
+      "target_email": "admin.bravo@gmail.com",
+      "target_name": "Admin Bravo",
+      "reason": "Routine civic transfer",
+      "status": "declined",
+      "created_at": "2026-11-26T17:35:00.342Z",
+      "updated_at": "2026-11-26T17:35:00.395Z",
+      "decision_by": "admin-b-test",
+      "decision_at": "2026-11-26T17:35:00.395Z",
+      "decision_note": "Still actively serving district"
+    }
+  ]
 }

@@ -42,12 +42,15 @@ export default function Notifications() {
     try {
       const reportsPromise = getMyReports(session?.access_token).catch(() => ({ data: [] }));
       const adminPromise = (isAdmin && session?.access_token)
-        ? getAdminNotifications(session.access_token).catch(() => ({ pendingForMe: [], myDecisions: [] }))
-        : Promise.resolve({ pendingForMe: [], myDecisions: [] });
+        ? getAdminNotifications(session.access_token).catch(() => ({ pendingApprovalRequests: [], decisionUpdates: [] }))
+        : Promise.resolve({ pendingApprovalRequests: [], decisionUpdates: [] });
 
       const [repRes, admRes] = await Promise.all([reportsPromise, adminPromise]);
       setReports(repRes.data || []);
-      setAdminNotifs(admRes || { pendingForMe: [], myDecisions: [] });
+      setAdminNotifs({
+        pendingForMe: admRes?.pendingApprovalRequests || admRes?.pendingForMe || [],
+        myDecisions: admRes?.decisionUpdates || admRes?.myDecisions || []
+      });
     } catch (err) {
       console.warn('Failed to fetch notifications:', err);
     } finally {
@@ -352,7 +355,7 @@ export default function Notifications() {
               <div key={i} className="card p-5 animate-pulse bg-[#191D20] border-[#2E363D] rounded-2xl h-24" />
             ))}
           </div>
-        ) : filteredNotifs.length === 0 ? (
+        ) : filteredNotifs.length === 0 && (!isAdmin || ((adminNotifs.pendingForMe?.length || 0) === 0 && (adminNotifs.myDecisions?.length || 0) === 0)) ? (
           <div className="card p-12 text-center bg-[#191D20] border-[#2E363D] rounded-3xl">
             <Bell size={36} className="mx-auto text-[#A8A8A3] mb-3" />
             <h3 className="text-base font-bold text-[#F5F2ED]">No notifications to display</h3>
