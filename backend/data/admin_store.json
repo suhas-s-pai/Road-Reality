@@ -1,0 +1,95 @@
+{
+  "invitations": [
+    {
+      "id": "inv_1795629894738_n4un8",
+      "email": "test.staff.1795629873507@gmail.com",
+      "full_name": "Test Civic Staff",
+      "invited_by": "bootstrap-admin-01",
+      "invited_by_email": "suhaspai13@gmail.com",
+      "status": "pending",
+      "created_at": "2026-11-25T18:04:54.738Z",
+      "updated_at": "2026-11-25T18:04:54.738Z"
+    },
+    {
+      "id": "inv_1795630060329_y7ofe",
+      "email": "test.staff.1795630039202@gmail.com",
+      "full_name": "Test Civic Staff",
+      "invited_by": "bootstrap-admin-01",
+      "invited_by_email": "suhaspai13@gmail.com",
+      "status": "pending",
+      "created_at": "2026-11-25T18:07:40.329Z",
+      "updated_at": "2026-11-25T18:07:40.329Z"
+    },
+    {
+      "id": "inv_1795630163873_ngtns",
+      "email": "test.staff.1795630142742@gmail.com",
+      "full_name": "Test Civic Staff",
+      "invited_by": "bootstrap-admin-01",
+      "invited_by_email": "suhaspai13@gmail.com",
+      "status": "pending",
+      "created_at": "2026-11-25T18:09:23.873Z",
+      "updated_at": "2026-11-25T18:09:23.873Z"
+    },
+    {
+      "id": "inv_1795630271233_rthig",
+      "email": "test.staff.1795630250118@gmail.com",
+      "full_name": "Test Civic Staff",
+      "invited_by": "bootstrap-admin-01",
+      "invited_by_email": "suhaspai13@gmail.com",
+      "status": "pending",
+      "created_at": "2026-11-25T18:11:11.233Z",
+      "updated_at": "2026-11-25T18:11:11.233Z"
+    }
+  ],
+  "auditLogs": [
+    {
+      "id": "log_1795630271244_a2wkt",
+      "actor_id": "bootstrap-admin-01",
+      "actor_email": "suhaspai13@gmail.com",
+      "action": "INVITE_ADMIN",
+      "target_email": "test.staff.1795630250118@gmail.com",
+      "details": {
+        "fullName": "Test Civic Staff",
+        "status": "pending"
+      },
+      "created_at": "2026-11-25T18:11:11.244Z"
+    },
+    {
+      "id": "log_1795630163882_sqto3",
+      "actor_id": "bootstrap-admin-01",
+      "actor_email": "suhaspai13@gmail.com",
+      "action": "INVITE_ADMIN",
+      "target_email": "test.staff.1795630142742@gmail.com",
+      "details": {
+        "fullName": "Test Civic Staff",
+        "status": "pending"
+      },
+      "created_at": "2026-11-25T18:09:23.882Z"
+    },
+    {
+      "id": "log_1795630060343_6g3er",
+      "actor_id": "bootstrap-admin-01",
+      "actor_email": "suhaspai13@gmail.com",
+      "action": "INVITE_ADMIN",
+      "target_email": "test.staff.1795630039202@gmail.com",
+      "details": {
+        "fullName": "Test Civic Staff",
+        "status": "pending"
+      },
+      "created_at": "2026-11-25T18:07:40.343Z"
+    },
+    {
+      "id": "log_1795629894761_gsd3a",
+      "actor_id": "bootstrap-admin-01",
+      "actor_email": "suhaspai13@gmail.com",
+      "action": "INVITE_ADMIN",
+      "target_email": "test.staff.1795629873507@gmail.com",
+      "details": {
+        "fullName": "Test Civic Staff",
+        "status": "pending"
+      },
+      "created_at": "2026-11-25T18:04:54.761Z"
+    }
+  ],
+  "localAdmins": []
+}
