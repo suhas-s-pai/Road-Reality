@@ -130,11 +130,11 @@ export default function Explore() {
 
           {/* Search & Location Bar */}
           <div className="flex gap-2">
-            <label className="relative flex-1">
+                        <label className="relative flex-1 flex items-center">
               <span className="sr-only">Search hazards</span>
-              <Search className="absolute left-3 top-2.5 text-[#A8A8A3]" size={16} />
+              <Search className="absolute left-3.5 text-[#A8A8A3] pointer-events-none" size={16} />
               <input
-                className="input pl-9 text-xs py-2 bg-[#191D20] border-[#2E363D]"
+                className="input !pl-10 pr-3 text-xs py-2 w-full bg-[#191D20] border-[#2E363D]"
                 placeholder="Search category, location..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}

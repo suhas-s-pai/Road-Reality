@@ -458,7 +458,7 @@ export default function AdminDashboard() {
 
   // Copy SQL snippet
   const handleCopySql = () => {
-    const sqlText = `UPDATE public.profiles\nSET role = 'admin', updated_at = now()\nWHERE id = (SELECT id FROM auth.users WHERE email = 'suhaspai13@gmail.com' LIMIT 1);`;
+    const sqlText = `UPDATE public.profiles\nSET role = 'admin', updated_at = now()\nWHERE id = (SELECT id FROM auth.users WHERE email = '@user?.email' LIMIT 1);`;
     navigator.clipboard.writeText(sqlText);
     setCopiedSql(true);
     setTimeout(() => setCopiedSql(false), 2500);
@@ -1031,13 +1031,15 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
                   {/* Search and Dropdowns */}
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="relative">
-                      <Search className="absolute left-3 top-2.5 text-[#A8A8A3]" size={15} />
-                      <input
-                        className="input pl-9 w-full sm:w-56 text-xs py-2 bg-[#101417] border-[#2E363D]"
-                        placeholder="Search ID, category, location..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                      />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#A8A8A3] pointer-events-none" size={16} />
+
+<input
+  className="input !pl-10 pr-3 text-xs py-2 bg-[#191D20] border-[#2E363D]"
+  placeholder="Search ID, category, location..."
+  value={searchQuery}
+  onChange={(e) => setSearchQuery(e.target.value)}
+/>
+
                     </div>
 
                     <select
@@ -1829,14 +1831,14 @@ WHERE id = (SELECT id FROM auth.users WHERE email = '${currentUser.email}' LIMIT
                   Administrator SQL Helper
                 </h3>
                 <p className="text-xs text-[#A8A8A3]">
-                  Run this query in your Supabase SQL Editor to grant admin role to <strong className="text-[#F5F2ED]">suhaspai13@gmail.com</strong>:
+                  Run this query in your Supabase SQL Editor to grant admin role to <strong className="text-[#F5F2ED]">{currentUser?.email || 'sharayuankolekar765@gmail.com'}</strong>:
                 </p>
 
                 <div className="relative">
                   <pre className="block bg-[#101417] text-[#F5A623] p-4 rounded-xl font-mono text-xs overflow-x-auto select-all border border-[#2E363D]">
 {`UPDATE public.profiles
 SET role = 'admin', updated_at = now()
-WHERE id = (SELECT id FROM auth.users WHERE email = 'suhaspai13@gmail.com' LIMIT 1);`}
+WHERE id = (SELECT id FROM auth.users WHERE email = 'user?.email' LIMIT 1);`}
                   </pre>
 
                   <button

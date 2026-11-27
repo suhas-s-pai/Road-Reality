@@ -284,3 +284,7 @@ textarea:focus-visible {
 ::-webkit-scrollbar-thumb:hover {
   background: #F5A623;
 }
+
+.map-tiles-dark {
+  filter: invert(92%) hue-rotate(180deg) brightness(95%) contrast(95%);
+}

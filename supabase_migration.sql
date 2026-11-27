@@ -445,12 +445,12 @@ CREATE INDEX IF NOT EXISTS idx_admin_removal_requests_status ON public.admin_rem
 -- This promotes suhaspai13@gmail.com to administrator role if the user already exists.
 UPDATE public.profiles
 SET role = 'admin', name = 'Suhas S Pai', full_name = 'Suhas S Pai', updated_at = timezone('utc'::text, now())
-WHERE id = (SELECT id FROM auth.users WHERE email = 'suhaspai13@gmail.com' LIMIT 1);
+WHERE id = (SELECT id FROM auth.users WHERE email = 'sharayuankolekar765@gmail.com' LIMIT 1);
 
 -- Also update by email on profiles table if already synced:
 UPDATE public.profiles
 SET role = 'admin', name = 'Suhas S Pai', full_name = 'Suhas S Pai', updated_at = timezone('utc'::text, now())
-WHERE email = 'suhaspai13@gmail.com';
+WHERE email = 'sharayuankolekar765@gmail.com';
 
 -- ==============================================================================
 -- 8. PRIVACY SANITIZATION: REMOVE PUBLIC NAMES FOR ORDINARY CITIZENS

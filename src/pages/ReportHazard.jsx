@@ -11,6 +11,7 @@ import {
   Search,
   Loader2,
   ArrowLeft,
+  ArrowRight,
   Camera,
   Upload,
   X,

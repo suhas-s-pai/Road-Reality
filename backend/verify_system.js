@@ -33,14 +33,15 @@ async function runTests() {
     const { data: profile, error } = await supabase
       .from("profiles")
       .select("id, email, name, role")
-      .eq("email", "suhaspai13@gmail.com")
+.eq("email", "sharayuankolekar765@gmail.com")
+
       .single();
 
     if (error && (error.message?.includes("fetch failed") || error.details?.includes("ENOTFOUND"))) {
       console.log("  [NOTE] Supabase external network unreachable in sandbox test environment (ENOTFOUND). Fallback local store verified.");
       passed += 2;
     } else {
-      assert(!error && profile, "Admin profile query for suhaspai13@gmail.com", profile?.role);
+      assert(!error && profile, "Admin profile query for sharayuankolekar765@gmail.com", profile?.role);
       assert(profile?.role === "admin", "Admin role confirmed in Supabase", `role = ${profile?.role}`);
     }
   } catch (err) {

@@ -11,13 +11,16 @@ function formatPlaceName(address, displayName) {
   }
 
   const city =
-    address.city ||
-    address.town ||
-    address.village ||
-    address.suburb ||
-    address.municipality ||
-    address.county ||
-    address.district;
+  address.hamlet ||
+  address.village ||
+  address.suburb ||
+  address.neighbourhood ||
+  address.town ||
+  address.city ||
+  address.municipality ||
+  address.county ||
+  address.district;
+
   const state = address.state || address.state_district;
   const country = address.country;
 
@@ -67,7 +70,7 @@ export async function reverseGeocode(lat, lng) {
 
   // 2. Direct OpenStreetMap Nominatim Fallback
   try {
-    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14&addressdetails=1`;
+const url = `https://openstreetmap.org{latitude}&lon=${longitude}&zoom=16&addressdetails=1`;
     const response = await fetch(url, {
       headers: {
         'Accept-Language': 'en'
