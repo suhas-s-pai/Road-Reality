@@ -23,7 +23,7 @@ export default function Profile() {
   const userName =
     user?.user_metadata?.full_name ||
     user?.user_metadata?.name ||
-    user?.email?.split('@')[0] ||
+   user?.email ?.split('@')[0] ||
     'Citizen';
 
   const avatarUrl = user?.user_metadata?.avatar_url;

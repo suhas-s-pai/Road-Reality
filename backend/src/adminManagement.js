@@ -123,7 +123,7 @@ async function listAdmins() {
     return store.localAdmins;
   }
 
-  const bootstrapEmail = process.env.ADMIN_EMAIL || "suhaspai13@gmail.com";
+  const bootstrapEmail = process.env.ADMIN_EMAIL || "user?.email";
   return [{
     id: "bootstrap-admin-01",
     email: bootstrapEmail,
